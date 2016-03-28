@@ -47,6 +47,11 @@ public class PermissionManager {
     public PermissionManager(BungeeTabListPlus plugin) {
         this.plugin = plugin;
     }
+    
+    public static void setCustomGroupProvider(CustomGroupProvider input)
+    {
+        customGroupProvider = input;
+    }
 
     public String getMainGroup(IPlayer player) {
         String mode = plugin.getConfigManager().getMainConfig().permissionSource;
