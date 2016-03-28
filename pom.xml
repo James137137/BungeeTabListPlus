@@ -9,14 +9,10 @@
     <version>2.4.4-SNAPSHOT</version>
     <modules>
         <module>bungee</module>
-        <module>bukkit</module>
         <module>common</module>
         <module>bootstrap-bungee</module>
-        <module>bootstrap-bukkit</module>
         <module>network</module>
         <module>legacy</module>
-        <module>data</module>
-        <module>api-bukkit</module>
         <module>api-bungee</module>
     </modules>
 
