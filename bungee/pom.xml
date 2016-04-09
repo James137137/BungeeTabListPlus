@@ -142,7 +142,20 @@
             <version>3.0.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>nz.co.lolnet</groupId>
+            <artifactId>LolnetFourmPermissionBridgeBC</artifactId>
+            <version>1.0.3-SNAPSHOT-1</version>
+            <type>jar</type>
+        </dependency>
     </dependencies>
+    
+    <repositories>
+        <repository>
+            <id>Lolnet-Repo</id>
+            <url>http://jenkins.lolnet.co.nz/plugin/repository/everything/</url>
+        </repository>
+    </repositories>
 
     <build>
         <defaultGoal>package</defaultGoal>

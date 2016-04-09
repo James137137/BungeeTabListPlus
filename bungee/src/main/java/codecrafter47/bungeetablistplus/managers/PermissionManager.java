@@ -37,6 +37,8 @@ import net.md_5.bungee.api.plugin.Plugin;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.logging.Level;
+import java.util.logging.Logger;
+import nz.co.lolnet.lolnetfourmpermissionbcbridge.LolnetFourmPermissionBCBridge;
 
 public class PermissionManager {
 
@@ -47,6 +49,15 @@ public class PermissionManager {
     }
 
     public String getMainGroup(IPlayer player) {
+
+        try {
+            String highestRank = LolnetFourmPermissionBCBridge.getHighestPlayerRank(player.getName());
+            if (!highestRank.equalsIgnoreCase("NULL")) {
+                return highestRank;
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(PermissionManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
         String mode = plugin.getConfigManager().getMainConfig().permissionSource;
         if (mode.equalsIgnoreCase("BungeePerms")) {
             return ((Player) player).get(DataKeys.BungeePerms_PrimaryGroup).orElse("");
@@ -365,7 +376,9 @@ public class PermissionManager {
             ConnectedPlayer player = plugin.getConnectedPlayerManager().getPlayerIfPresent((ProxiedPlayer) sender);
             if (player != null) {
                 Optional<Boolean> has = player.get(dataKey);
-                if (has.isPresent()) return has.get();
+                if (has.isPresent()) {
+                    return has.get();
+                }
             }
         } catch (Throwable th) {
             BungeeTabListPlus.getInstance().reportError(th);
