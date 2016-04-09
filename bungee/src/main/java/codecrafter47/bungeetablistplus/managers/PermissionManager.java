@@ -55,9 +55,7 @@ public class PermissionManager {
             if (!highestRank.equalsIgnoreCase("NULL")) {
                 return highestRank;
             }
-        } catch (Exception ex) {
-            Logger.getLogger(PermissionManager.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        } catch (Exception ex) {}
         String mode = plugin.getConfigManager().getMainConfig().permissionSource;
         if (mode.equalsIgnoreCase("BungeePerms")) {
             return ((Player) player).get(DataKeys.BungeePerms_PrimaryGroup).orElse("");
