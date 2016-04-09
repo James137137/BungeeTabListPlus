@@ -147,6 +147,7 @@
             <artifactId>LolnetFourmPermissionBridgeBC</artifactId>
             <version>1.0.3-SNAPSHOT-1</version>
             <type>jar</type>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     
