@@ -17,27 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package codecrafter47.bungeetablistplus.skin;
+package codecrafter47.bungeetablistplus.protocol;
 
-import codecrafter47.bungeetablistplus.api.bungee.Skin;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-
-import java.util.UUID;
-
-@AllArgsConstructor
-@EqualsAndHashCode
-public class PlayerSkin implements Skin {
-    UUID player;
-    String[][] properties;
-
-    @Override
-    public String[][] toProperty() {
-        return properties;
-    }
-
-    @Override
-    public UUID getOwner() {
-        return player;
-    }
+public enum PacketListenerResult {
+    PASS, MODIFIED, CANCEL;
 }

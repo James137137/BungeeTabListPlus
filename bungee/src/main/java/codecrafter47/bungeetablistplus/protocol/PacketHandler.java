@@ -17,27 +17,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package codecrafter47.bungeetablistplus.skin;
+package codecrafter47.bungeetablistplus.protocol;
 
-import codecrafter47.bungeetablistplus.api.bungee.Skin;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
+import net.md_5.bungee.protocol.packet.PlayerListHeaderFooter;
+import net.md_5.bungee.protocol.packet.PlayerListItem;
+import net.md_5.bungee.protocol.packet.Team;
 
-import java.util.UUID;
+public interface PacketHandler {
 
-@AllArgsConstructor
-@EqualsAndHashCode
-public class PlayerSkin implements Skin {
-    UUID player;
-    String[][] properties;
+    PacketListenerResult onPlayerListPacket(PlayerListItem packet);
 
-    @Override
-    public String[][] toProperty() {
-        return properties;
-    }
+    PacketListenerResult onTeamPacket(Team packet);
 
-    @Override
-    public UUID getOwner() {
-        return player;
-    }
+    PacketListenerResult onPlayerListHeaderFooterPacket(PlayerListHeaderFooter packet);
+
+    void onServerSwitch();
 }
