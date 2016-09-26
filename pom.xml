@@ -13,12 +13,10 @@
         <module>common</module>
         <module>bootstrap-bungee</module>
         <module>bootstrap-bukkit</module>
-        <module>data</module>
         <module>api-bukkit</module>
         <module>api-bungee</module>
         <module>api-sponge</module>
         <module>sponge</module>
-        <module>example</module>
         <module>bootstrap-bungee-debug</module>
         <module>yaml-config</module>
     </modules>
