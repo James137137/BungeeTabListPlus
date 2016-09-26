@@ -55,9 +55,9 @@ public class TimePlaceholders extends PlaceholderProvider {
         bind(name).setRequiredUpdateInterval(requiredUpdateInterval).to(context -> format.format(System.currentTimeMillis()));
     }
 
-    private SimpleDateFormat getFormat(String pattern) {
+    public static SimpleDateFormat getFormat(String pattern) {
         SimpleDateFormat format = new SimpleDateFormat(pattern);
-        format.setTimeZone(BungeeTabListPlus.getInstance().getConfigManager().getMainConfig().getTimeZone());
+        format.setTimeZone(BungeeTabListPlus.getInstance().getConfig().getTimeZone());
         return format;
     }
 }

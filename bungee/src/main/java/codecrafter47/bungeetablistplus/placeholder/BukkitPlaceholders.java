@@ -25,6 +25,7 @@ import codecrafter47.bungeetablistplus.data.DataKey;
 import codecrafter47.bungeetablistplus.data.DataKeys;
 import codecrafter47.bungeetablistplus.player.ConnectedPlayer;
 import codecrafter47.bungeetablistplus.player.Player;
+import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
 
 import java.util.Optional;
@@ -38,7 +39,7 @@ public class BukkitPlaceholders extends PlaceholderProvider {
             Optional<ServerInfo> server = context.getPlayer().getServer();
             if (world.isPresent() && server.isPresent()) {
                 String key = server.get().getName() + ":" + world.get();
-                String alias = BungeeTabListPlus.getInstance().getConfigManager().getMainConfig().worldAlias.get(key);
+                String alias = BungeeTabListPlus.getInstance().getConfig().worldAlias.get(key);
                 if (alias != null) return alias;
                 return world.get();
             }
@@ -75,6 +76,8 @@ public class BukkitPlaceholders extends PlaceholderProvider {
         addBukkitBridgePlaceholder("vault_group", DataKeys.Vault_PermissionGroup);
         addBukkitBridgePlaceholder("vault_prefix", DataKeys.Vault_Prefix);
         addBukkitBridgePlaceholder("vault_suffix", DataKeys.Vault_Suffix);
+        addBukkitBridgePlaceholder("vault_primary_group_prefix", DataKeys.Vault_PrimaryGroupPrefix);
+        addBukkitBridgePlaceholder("vault_player_prefix", DataKeys.Vault_PlayerPrefix);
         addBukkitBridgePlaceholder("health", DataKeys.Health, health -> health.map(h -> String.format("%1.1f", h)).orElse("-"));
         addBukkitBridgePlaceholder("maxHealth", DataKeys.MaxHealth, health -> health.map(h -> String.format("%1.1f", h)).orElse("-"));
         addBukkitBridgePlaceholder("posX", DataKeys.PosX, pos -> pos.map(d -> String.format("%1.0f", d)).orElse(""));
@@ -86,7 +89,16 @@ public class BukkitPlaceholders extends PlaceholderProvider {
         addBukkitBridgePlaceholder("playerPoints", DataKeys.PlayerPoints_Points);
         addBukkitBridgeServerPlaceholder("currency", DataKeys.Vault_CurrencyNameSingular);
         addBukkitBridgeServerPlaceholder("currencyPl", DataKeys.Vault_CurrencyNamePlural);
-        addBukkitBridgeServerPlaceholder("tps", DataKeys.TPS, tps -> tps.map(d -> String.format("%1.1f", d)).orElse(""));
+        bind("tps").withArgs().to((context, arg) -> {
+            if (arg != null) {
+                ServerInfo serverInfo = ProxyServer.getInstance().getServerInfo(arg);
+                if (serverInfo != null) {
+                    return BungeeTabListPlus.getInstance().getBridge().get(serverInfo, DataKeys.TPS).map(d -> String.format("%1.1f", d)).orElse("");
+                }
+                return "";
+            }
+            return context.getServer().map(serverInfo -> BungeeTabListPlus.getInstance().getBridge().get(serverInfo, DataKeys.TPS).map(d -> String.format("%1.1f", d)).orElse("")).orElse("");
+        });
         bind("tabName").to(context -> {
             Optional<String> tabName = ((Player) context.getPlayer()).get(DataKeys.PlayerListName);
             if (tabName.isPresent()) {

@@ -20,6 +20,7 @@
 package codecrafter47.bungeetablistplus.player;
 
 import codecrafter47.bungeetablistplus.BungeeTabListPlus;
+import codecrafter47.bungeetablistplus.api.bungee.Icon;
 import codecrafter47.bungeetablistplus.api.bungee.Skin;
 import codecrafter47.bungeetablistplus.data.DataKey;
 import com.google.common.base.Charsets;
@@ -111,6 +112,16 @@ public class FakePlayer implements Player, codecrafter47.bungeetablistplus.api.b
         ConnectedPlayer player = BungeeTabListPlus.getInstance().getConnectedPlayerManager().getPlayerIfPresent(getName());
         if (player != null) {
             return player.get(key);
+        }
+        if (key.equals(BungeeTabListPlus.DATA_KEY_GAMEMODE)) {
+            return (Optional<T>) Optional.of(gamemode);
+        }
+        if (key.equals(BungeeTabListPlus.DATA_KEY_SERVER)) {
+            return (Optional<T>) Optional.of(server.getName());
+        }
+        if (key.equals(BungeeTabListPlus.DATA_KEY_ICON)) {
+            Skin skin = getSkin();
+            return (Optional<T>) Optional.of(new Icon(skin.getOwner(), skin.toProperty()));
         }
         return Optional.empty();
     }

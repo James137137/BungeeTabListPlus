@@ -20,6 +20,9 @@
 package codecrafter47.bungeetablistplus.player;
 
 import codecrafter47.bungeetablistplus.BungeeTabListPlus;
+import codecrafter47.bungeetablistplus.Options;
+import codecrafter47.bungeetablistplus.api.bungee.BungeeTabListPlusAPI;
+import codecrafter47.bungeetablistplus.api.bungee.CustomTablist;
 import codecrafter47.bungeetablistplus.api.bungee.Skin;
 import codecrafter47.bungeetablistplus.bridge.BukkitBridge;
 import codecrafter47.bungeetablistplus.common.Constants;
@@ -28,21 +31,27 @@ import codecrafter47.bungeetablistplus.data.DataKey;
 import codecrafter47.bungeetablistplus.protocol.PacketHandler;
 import codecrafter47.bungeetablistplus.skin.PlayerSkin;
 import codecrafter47.bungeetablistplus.tablisthandler.LegacyTabList;
+import codecrafter47.bungeetablistplus.tablisthandler.LoggingTabListLogic;
 import codecrafter47.bungeetablistplus.tablisthandler.PlayerTablistHandler;
+import codecrafter47.bungeetablistplus.tablisthandler.logic.GetGamemodeLogic;
+import codecrafter47.bungeetablistplus.tablisthandler.logic.LowMemoryTabListLogic;
 import codecrafter47.bungeetablistplus.tablisthandler.logic.RewriteLogic;
 import codecrafter47.bungeetablistplus.tablisthandler.logic.TabListLogic;
+import codecrafter47.bungeetablistplus.util.ReflectionUtil;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.Synchronized;
 import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
-import net.md_5.bungee.connection.LoginResult;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +71,13 @@ public class ConnectedPlayer implements Player {
 
     @Getter
     private DataCache data = new DataCache();
+
+    @Getter
+    @Setter
+    private CustomTablist customTablist = null;
+
+    @Getter
+    private final LocalDateTime timePointJoined = LocalDateTime.now();
 
     public ConnectedPlayer(ProxiedPlayer player) {
         this.player = player;
@@ -92,28 +108,15 @@ public class ConnectedPlayer implements Player {
     @Override
     public Skin getSkin() {
         if (skin == null) {
-            LoginResult loginResult = ((UserConnection) player).
-                    getPendingConnection().getLoginProfile();
-            if (loginResult != null) {
-                LoginResult.Property[] properties = loginResult.getProperties();
-                if (properties != null) {
-                    for (LoginResult.Property s : properties) {
-                        if (s.getName().equals("textures")) {
-                            skin = new PlayerSkin(player.getUniqueId(), new String[][]{{s.getName(), s.getValue(), s.getSignature()}});
-                        }
-                    }
-                }
-            }
-            if (skin == null) {
-                skin = new PlayerSkin(player.getUniqueId(), null);
-            }
+            skin = PlayerSkin.fromIcon(BungeeTabListPlusAPI.getIconFromPlayer(player));
         }
         return skin;
     }
 
     @Override
     public int getGameMode() {
-        return !BungeeTabListPlus.getInstance().getProtocolVersionProvider().has18OrLater(player) ? ((UserConnection) player).getGamemode() : 0;
+        Integer gamemode = data.getRawValue(BungeeTabListPlus.DATA_KEY_GAMEMODE);
+        return gamemode != null ? gamemode : 0;
     }
 
     public ProxiedPlayer getPlayer() {
@@ -172,16 +175,32 @@ public class ConnectedPlayer implements Player {
         return playerTablistHandler;
     }
 
+    @SneakyThrows
     private void createTabListHandler() {
         if (BungeeTabListPlus.getInstance().getProtocolVersionProvider().has18OrLater(getPlayer())) {
-            TabListLogic tabListLogic = new TabListLogic(null, getPlayer());
+            TabListLogic tabListLogic;
+            if (Options.DEBUG) {
+                tabListLogic = new LoggingTabListLogic(null, getPlayer());
+            } else {
+                //TabListLogic tabListLogic = new TabListLogic(null, getPlayer());
+                // TODO: revert this change as soon as the underlying issue is fixed
+                tabListLogic = new LowMemoryTabListLogic(null, getPlayer());
+            }
             playerTablistHandler = PlayerTablistHandler.create(getPlayer(), tabListLogic);
-            packetHandler = new RewriteLogic(tabListLogic);
-            tabListLogic.onConnected();
+            packetHandler = new RewriteLogic(new GetGamemodeLogic(tabListLogic, ((UserConnection) getPlayer())));
+            if (ReflectionUtil.getChannelWrapper(player).getHandle().eventLoop().inEventLoop()) {
+                tabListLogic.onConnected();
+            } else {
+                ReflectionUtil.getChannelWrapper(player).getHandle().eventLoop().submit(tabListLogic::onConnected);
+            }
         } else {
             LegacyTabList legacyTabList = new LegacyTabList(getPlayer(), getPlayer().getPendingConnection().getListener().getTabListSize());
             playerTablistHandler = PlayerTablistHandler.create(getPlayer(), legacyTabList);
             packetHandler = legacyTabList;
         }
+    }
+
+    public Duration getCurrentSessionDuration() {
+        return Duration.between(getTimePointJoined(), LocalDateTime.now());
     }
 }

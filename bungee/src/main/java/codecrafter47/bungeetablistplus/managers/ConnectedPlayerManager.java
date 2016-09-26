@@ -22,21 +22,15 @@ package codecrafter47.bungeetablistplus.managers;
 import codecrafter47.bungeetablistplus.BungeeTabListPlus;
 import codecrafter47.bungeetablistplus.player.ConnectedPlayer;
 import codecrafter47.bungeetablistplus.player.IPlayerProvider;
+import codecrafter47.bungeetablistplus.protocol.PacketHandler;
+import codecrafter47.bungeetablistplus.tablisthandler.logic.TabListHandler;
 import com.google.common.collect.ImmutableList;
 import lombok.Synchronized;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public class ConnectedPlayerManager implements IPlayerProvider {
 
@@ -52,7 +46,7 @@ public class ConnectedPlayerManager implements IPlayerProvider {
 
     @Nonnull
     public ConnectedPlayer getPlayer(ProxiedPlayer player) {
-        return Objects.requireNonNull(byName.get(player.getName()));
+        return Objects.requireNonNull(getPlayerIfPresent(player));
     }
 
     @Nonnull
@@ -67,7 +61,8 @@ public class ConnectedPlayerManager implements IPlayerProvider {
 
     @Nullable
     public ConnectedPlayer getPlayerIfPresent(ProxiedPlayer player) {
-        return byName.get(player.getName());
+        ConnectedPlayer connectedPlayer = byName.get(player.getName());
+        return connectedPlayer != null && connectedPlayer.getPlayer() == player ? connectedPlayer : null;
     }
 
     @Nullable
@@ -91,10 +86,17 @@ public class ConnectedPlayerManager implements IPlayerProvider {
 
     @Synchronized
     public void onPlayerDisconnected(ConnectedPlayer player) {
-        players.remove(player);
+        if (!players.remove(player)) {
+            return;
+        }
         byName.remove(player.getName(), player);
         byUUID.remove(player.getUniqueID(), player);
         BungeeTabListPlus.getInstance().getBridge().onDisconnected(player.getPlayer());
         playerList = ImmutableList.copyOf((Iterable<? extends ConnectedPlayer>) players);
+        player.getPlayerTablistHandler().onDisconnect();
+        PacketHandler packetHandler = player.getPacketHandler();
+        if (packetHandler instanceof TabListHandler) {
+            ((TabListHandler) packetHandler).onDisconnected();
+        }
     }
 }

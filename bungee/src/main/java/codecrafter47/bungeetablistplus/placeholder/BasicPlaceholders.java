@@ -130,6 +130,8 @@ public class BasicPlaceholders extends PlaceholderProvider {
         bind("bungeeperms_prefix").to(context -> ((Player) context.getPlayer()).get(DataKeys.BungeePerms_Prefix).orElse(""));
         bind("bungeeperms_suffix").to(context -> ((Player) context.getPlayer()).get(DataKeys.BungeePerms_Suffix).orElse(""));
         bind("bungeeperms_group").to(context -> ((Player) context.getPlayer()).get(DataKeys.BungeePerms_PrimaryGroup).orElse(""));
+        bind("bungeeperms_primary_group_prefix").to(context -> ((Player) context.getPlayer()).get(DataKeys.BungeePerms_PrimaryGroupPrefix).orElse(""));
+        bind("bungeeperms_player_prefix").to(context -> ((Player) context.getPlayer()).get(DataKeys.BungeePerms_PlayerPrefix).orElse(""));
         bind("clientVersion").to(context -> ((Player) context.getPlayer()).get(DataKeys.ClientVersion).orElse("unknown"));
         bind("ping").to(context -> String.format("%d", context.getPlayer().getPing()));
         bind("group").to(context -> BungeeTabListPlus.getInstance().getPermissionManager().getMainGroup(context.getPlayer()));
@@ -137,9 +139,9 @@ public class BasicPlaceholders extends PlaceholderProvider {
         bind("internalServerName").to(context -> context.getServer().map(ServerInfo::getName).orElse(""));
         bind("serverPrefix").withArgs().to((context, args) -> {
             if (args != null && !args.isEmpty()) {
-                return BungeeTabListPlus.getInstance().getConfigManager().getMainConfig().serverPrefixes.get(args);
+                return BungeeTabListPlus.getInstance().getConfig().serverPrefixes.get(args);
             } else {
-                return context.getServer().map(s -> BungeeTabListPlus.getInstance().getConfigManager().getMainConfig().serverPrefixes.get(s.getName())).orElse("");
+                return context.getServer().map(s -> BungeeTabListPlus.getInstance().getConfig().serverPrefixes.get(s.getName())).orElse("");
             }
         });
         bind("other_count").to(context -> {

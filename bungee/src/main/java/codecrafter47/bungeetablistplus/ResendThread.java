@@ -18,16 +18,15 @@
  */
 package codecrafter47.bungeetablistplus;
 
-import codecrafter47.bungeetablistplus.api.bungee.tablist.TabList;
-import codecrafter47.bungeetablistplus.api.bungee.tablist.TabListContext;
-import codecrafter47.bungeetablistplus.api.bungee.tablist.TabListProvider;
+import codecrafter47.bungeetablistplus.config.Config;
+import codecrafter47.bungeetablistplus.config.DynamicSizeConfig;
+import codecrafter47.bungeetablistplus.config.FixedSizeConfig;
+import codecrafter47.bungeetablistplus.context.Context;
 import codecrafter47.bungeetablistplus.layout.LayoutException;
 import codecrafter47.bungeetablistplus.managers.ConnectedPlayerManager;
 import codecrafter47.bungeetablistplus.player.ConnectedPlayer;
-import codecrafter47.bungeetablistplus.tablist.GenericTabList;
-import codecrafter47.bungeetablistplus.tablist.GenericTabListContext;
 import codecrafter47.bungeetablistplus.tablisthandler.PlayerTablistHandler;
-import codecrafter47.bungeetablistplus.tablistproviders.ErrorTabListProvider;
+import codecrafter47.bungeetablistplus.tablistproviders.*;
 import gnu.trove.set.hash.THashSet;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
@@ -121,59 +120,42 @@ class ResendThread implements Runnable, Executor {
         PlayerTablistHandler tablistHandler = connectedPlayer.getPlayerTablistHandler();
 
         try {
-            Server server = player.getServer();
-            if (server != null && (BungeeTabListPlus.getInstance().getConfigManager().
-                    getMainConfig().excludeServers.contains(server.getInfo().getName()))) {
-                tablistHandler.setPassThrough(true);
-                return;
-            }
-
-            TabListProvider tlp = BungeeTabListPlus.getInstance().
-                    getTabListManager().getTabListForPlayer(player);
-            if (tlp == null) {
-                tablistHandler.setPassThrough(true);
-                return;
-            }
-
-            TabList tabList;
-
-            if (BungeeTabListPlus.getInstance().getProtocolVersionProvider().has18OrLater(player)) {
-                int wishedTabListSize = tlp.getWishedTabListSize();
-                if (wishedTabListSize < 1) {
-                    wishedTabListSize = 1;
-                }
-                if (wishedTabListSize > 80) {
-                    wishedTabListSize = 80;
-                }
-                int columns = (wishedTabListSize + 19) / 20;
-                tabList = new GenericTabList(wishedTabListSize / columns, columns);
+            if (connectedPlayer.getCustomTablist() != null) {
+                tablistHandler.setTablistProvider((TablistProvider) connectedPlayer.getCustomTablist());
             } else {
-                tabList = new GenericTabList();
-            }
-
-            TabListContext context = new GenericTabListContext(tabList.getRows(), tabList.getColumns(), player, BungeeTabListPlus.getInstance().constructPlayerManager(player));
-
-                context = context.setPlayer(connectedPlayer);
-
-            tlp.fillTabList(player, tabList, context);
-
-            tablistHandler.sendTabList(tabList);
-        } catch (Throwable th) {
-            try {
-                BungeeTabListPlus.getInstance().getLogger().log(th instanceof LayoutException ? Level.WARNING : Level.SEVERE, "Error while updating tablist", th);
-                TabList tabList;
-                if (BungeeTabListPlus.getInstance().getProtocolVersionProvider().has18OrLater(player)) {
-                    tabList = new GenericTabList(20, 4);
+                TablistProvider tablistProvider = tablistHandler.getTablistProvider();
+                Server server = player.getServer();
+                if (server != null && !(BungeeTabListPlus.getInstance().getConfig().excludeServers.contains(server.getInfo().getName()))) {
+                    Context context = new Context().put(Context.KEY_VIEWER, connectedPlayer);
+                    Config config = BungeeTabListPlus.getInstance().getTabListManager().getNewConfigForContext(context);
+                    if (config != null && (!(tablistProvider instanceof ConfigTablistProvider) || ((ConfigTablistProvider) tablistProvider).config != config)) {
+                        tablistHandler.setTablistProvider(createTablistProvider(context, config));
+                        tablistProvider = tablistHandler.getTablistProvider();
+                    } else if (config == null && tablistProvider instanceof ConfigTablistProvider) {
+                        tablistHandler.setTablistProvider(tablistProvider = LegacyTablistProvider.INSTANCE);
+                    }
                 } else {
-                    tabList = new GenericTabList();
+                    tablistHandler.setTablistProvider(tablistProvider = LegacyTablistProvider.INSTANCE);
                 }
 
-                ErrorTabListProvider.constructErrorTabList(player, tabList, "Error while updating tablist", th);
-
-                tablistHandler.sendTabList(tabList);
-            } catch (Throwable th2) {
-                BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "Failed to construct error tab list", th2);
+                if (tablistProvider instanceof LegacyTablistProvider) {
+                    ((LegacyTablistProvider) tablistProvider).update(tablistHandler);
+                } else if (tablistProvider instanceof ConfigTablistProvider) {
+                    ((ConfigTablistProvider) tablistProvider).update();
+                }
             }
+        } catch (Throwable th) {
+            BungeeTabListPlus.getInstance().getLogger().log(th instanceof LayoutException ? Level.WARNING : Level.SEVERE, "Error while updating tablist", th);
+        }
+    }
+
+    private ConfigTablistProvider createTablistProvider(Context context, Config config) {
+        if (config instanceof FixedSizeConfig) {
+            return new FixedSizeConfigTablistProvider((FixedSizeConfig) config, context);
+        } else if (config instanceof DynamicSizeConfig) {
+            return new DynamicSizeConfigTablistProvider((DynamicSizeConfig) config, context);
+        } else {
+            throw new RuntimeException("Unknown tab list config type: " + config.getClass());
         }
     }
 }

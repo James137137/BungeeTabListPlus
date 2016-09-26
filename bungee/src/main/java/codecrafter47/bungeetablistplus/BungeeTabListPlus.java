@@ -18,74 +18,60 @@
  */
 package codecrafter47.bungeetablistplus;
 
-import codecrafter47.bungeetablistplus.api.bungee.BungeeTabListPlusAPI;
-import codecrafter47.bungeetablistplus.api.bungee.FakePlayerManager;
-import codecrafter47.bungeetablistplus.api.bungee.PlayerManager;
-import codecrafter47.bungeetablistplus.api.bungee.Skin;
+import codecrafter47.bungeetablistplus.api.bungee.*;
 import codecrafter47.bungeetablistplus.api.bungee.placeholder.PlaceholderProvider;
 import codecrafter47.bungeetablistplus.api.bungee.tablist.TabListProvider;
 import codecrafter47.bungeetablistplus.bridge.BukkitBridge;
 import codecrafter47.bungeetablistplus.bridge.PlaceholderAPIHook;
-import codecrafter47.bungeetablistplus.commands.OldSuperCommand;
-import codecrafter47.bungeetablistplus.commands.SuperCommand;
+import codecrafter47.bungeetablistplus.command.CommandBungeeTabListPlus;
+import codecrafter47.bungeetablistplus.common.BTLPDataKeys;
 import codecrafter47.bungeetablistplus.common.BugReportingService;
 import codecrafter47.bungeetablistplus.common.Constants;
+import codecrafter47.bungeetablistplus.config.MainConfig;
+import codecrafter47.bungeetablistplus.data.DataKey;
 import codecrafter47.bungeetablistplus.data.DataKeys;
 import codecrafter47.bungeetablistplus.listener.TabListListener;
-import codecrafter47.bungeetablistplus.managers.ConfigManager;
-import codecrafter47.bungeetablistplus.managers.ConnectedPlayerManager;
-import codecrafter47.bungeetablistplus.managers.DataManager;
-import codecrafter47.bungeetablistplus.managers.PermissionManager;
-import codecrafter47.bungeetablistplus.managers.PlaceholderManagerImpl;
-import codecrafter47.bungeetablistplus.managers.PlayerManagerImpl;
-import codecrafter47.bungeetablistplus.managers.RedisPlayerManager;
-import codecrafter47.bungeetablistplus.managers.SkinManager;
-import codecrafter47.bungeetablistplus.managers.SkinManagerImpl;
-import codecrafter47.bungeetablistplus.managers.TabListManager;
-import codecrafter47.bungeetablistplus.placeholder.BasicPlaceholders;
-import codecrafter47.bungeetablistplus.placeholder.BukkitPlaceholders;
-import codecrafter47.bungeetablistplus.placeholder.ColorPlaceholder;
-import codecrafter47.bungeetablistplus.placeholder.ConditionalPlaceholders;
-import codecrafter47.bungeetablistplus.placeholder.OnlineStatePlaceholder;
-import codecrafter47.bungeetablistplus.placeholder.PlayerCountPlaceholder;
-import codecrafter47.bungeetablistplus.placeholder.RedisBungeePlaceholders;
-import codecrafter47.bungeetablistplus.placeholder.TimePlaceholders;
+import codecrafter47.bungeetablistplus.managers.*;
+import codecrafter47.bungeetablistplus.placeholder.*;
+import codecrafter47.bungeetablistplus.player.ConnectedPlayer;
 import codecrafter47.bungeetablistplus.player.FakePlayerManagerImpl;
 import codecrafter47.bungeetablistplus.player.IPlayerProvider;
 import codecrafter47.bungeetablistplus.player.Player;
 import codecrafter47.bungeetablistplus.protocol.ProtocolManager;
-import codecrafter47.bungeetablistplus.tablistproviders.CheckedTabListProvider;
+import codecrafter47.bungeetablistplus.tablist.DefaultCustomTablist;
+import codecrafter47.bungeetablistplus.tablistproviders.legacy.CheckedTabListProvider;
 import codecrafter47.bungeetablistplus.updater.UpdateChecker;
 import codecrafter47.bungeetablistplus.updater.UpdateNotifier;
 import codecrafter47.bungeetablistplus.util.PingTask;
 import codecrafter47.bungeetablistplus.version.BungeeProtocolVersionProvider;
 import codecrafter47.bungeetablistplus.version.ProtocolSupportVersionProvider;
 import codecrafter47.bungeetablistplus.version.ProtocolVersionProvider;
+import codecrafter47.bungeetablistplus.yamlconfig.YamlConfig;
 import com.google.common.base.Preconditions;
 import de.sabbertran.proxysuite.ProxySuiteAPI;
 import lombok.Getter;
+import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.scheduler.ScheduledTask;
+import net.md_5.bungee.connection.LoginResult;
+import org.yaml.snakeyaml.error.YAMLException;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import javax.annotation.Nonnull;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -99,19 +85,24 @@ import java.util.zip.ZipInputStream;
  */
 public class BungeeTabListPlus extends BungeeTabListPlusAPI {
 
+    public static DataKey<Integer> DATA_KEY_GAMEMODE = DataKey.builder().id("btlp:gamemode").bungee().player().build();
+    public static DataKey<String> DATA_KEY_SERVER = DataKey.builder().id("btlp:server").bungee().player().build();
+    public static DataKey<Icon> DATA_KEY_ICON = DataKey.builder().id("btlp:icon").bungee().player().build();
+
     /**
      * Holds an INSTANCE of itself if the plugin is enabled
      */
     private static BungeeTabListPlus INSTANCE;
     @Getter
     private final Plugin plugin;
-    private Collection<IPlayerProvider> playerProviders;
+    public Collection<IPlayerProvider> playerProviders;
     private ResendThread resendThread;
 
     @Getter
     private RedisPlayerManager redisPlayerManager;
     @Getter
     private DataManager dataManager;
+    private BugReportingService bugReportingService;
 
     public BungeeTabListPlus(Plugin plugin) {
         this.plugin = plugin;
@@ -134,10 +125,8 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         return INSTANCE;
     }
 
-    /**
-     * provides access to the configuration
-     */
-    private ConfigManager config;
+    @Getter
+    private MainConfig config;
 
     private FakePlayerManagerImpl fakePlayerManager;
 
@@ -176,7 +165,7 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         ServerInfo serverInfo = ProxyServer.getInstance().getServerInfo(serverName);
         if (serverInfo != null) {
             // start server ping tasks
-            int delay = config.getMainConfig().pingDelay;
+            int delay = config.pingDelay;
             if (delay <= 0 || delay > 10) {
                 delay = 10;
             }
@@ -190,10 +179,16 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
     @Getter
     private ProtocolVersionProvider protocolVersionProvider;
 
+    private Map<Float, Set<Runnable>> scheduledTasks = new ConcurrentHashMap<>();
+
     /**
      * Called when the plugin is enabled
      */
     public void onEnable() {
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
+        }
+
         try {
             Class.forName("net.md_5.bungee.api.Title");
         } catch (ClassNotFoundException ex) {
@@ -211,16 +206,46 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         INSTANCE = this;
 
         try {
-            config = new ConfigManager(plugin);
-        } catch (IOException ex) {
+            File file = new File(plugin.getDataFolder(), "config.yml");
+            if (!file.exists()) {
+                config = new MainConfig();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8));
+                YamlConfig.writeWithComments(writer, config,
+                        "This is the configuration file of BungeeTabListPlus",
+                        "See https://github.com/CodeCrafter47/BungeeTabListPlus/wiki for additional information");
+            } else {
+                config = YamlConfig.read(new FileInputStream(file), MainConfig.class);
+            }
+        } catch (IOException | YAMLException ex) {
             plugin.getLogger().warning("Unable to load Config");
             plugin.getLogger().log(Level.WARNING, null, ex);
             plugin.getLogger().warning("Disabling Plugin");
             return;
         }
 
-        if (config.getMainConfig().automaticallySendBugReports) {
-            BugReportingService bugReportingService = new BugReportingService(Level.SEVERE, getPlugin().getDescription().getName(), getPlugin().getDescription().getVersion(), command -> plugin.getProxy().getScheduler().runAsync(plugin, command));
+        if (config.automaticallySendBugReports) {
+            String revision = "unknown";
+            try {
+                Properties current = new Properties();
+                current.load(getClass().getClassLoader().getResourceAsStream("version.properties"));
+                revision = current.getProperty("revision", revision);
+            } catch (IOException ex) {
+                getLogger().log(Level.SEVERE, "Unexpected exception", ex);
+            }
+
+            String version = getPlugin().getDescription().getVersion();
+
+            if (!"unknown".equals(revision)) {
+                version += "-git-" + revision;
+            }
+
+            String systemInfo = "" +
+                    "System Info\n" +
+                    "===========\n" +
+                    "Bungee: " + getProxy().getVersion() + "\n" +
+                    "Java: " + System.getProperty("java.version") + "\n";
+
+            bugReportingService = new BugReportingService(Level.SEVERE, getPlugin().getDescription().getName(), version, command -> plugin.getProxy().getScheduler().runAsync(plugin, command), systemInfo);
             bugReportingService.registerLogger(getLogger());
         }
 
@@ -228,36 +253,36 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
 
         File headsFolder = new File(plugin.getDataFolder(), "heads");
 
-            if (!headsFolder.exists()) {
-                headsFolder.mkdirs();
+        if (!headsFolder.exists()) {
+            headsFolder.mkdirs();
 
-                try {
-                    // copy default heads
-                    ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(plugin.getFile()));
+            try {
+                // copy default heads
+                ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(plugin.getFile()));
 
-                    ZipEntry entry;
-                    while ((entry = zipInputStream.getNextEntry()) != null) {
-                        if (!entry.isDirectory() && entry.getName().startsWith("heads/")) {
-                            try {
-                                File targetFile = new File(plugin.getDataFolder(), entry.getName());
-                                targetFile.getParentFile().mkdirs();
-                                if (!targetFile.exists()) {
-                                    Files.copy(zipInputStream, targetFile.toPath());
-                                    getLogger().info("Extracted " + entry.getName());
-                                }
-                            } catch (IOException ex) {
-                                getLogger().log(Level.SEVERE, "Failed to extract file " + entry.getName(), ex);
+                ZipEntry entry;
+                while ((entry = zipInputStream.getNextEntry()) != null) {
+                    if (!entry.isDirectory() && entry.getName().startsWith("heads/")) {
+                        try {
+                            File targetFile = new File(plugin.getDataFolder(), entry.getName());
+                            targetFile.getParentFile().mkdirs();
+                            if (!targetFile.exists()) {
+                                Files.copy(zipInputStream, targetFile.toPath());
+                                getLogger().info("Extracted " + entry.getName());
                             }
+                        } catch (IOException ex) {
+                            getLogger().log(Level.SEVERE, "Failed to extract file " + entry.getName(), ex);
                         }
                     }
-
-                    zipInputStream.close();
-                } catch (IOException ex) {
-                    getLogger().log(Level.SEVERE, "Error extracting files", ex);
                 }
-            }
 
-            skins = new SkinManagerImpl(plugin, headsFolder);
+                zipInputStream.close();
+            } catch (IOException ex) {
+                getLogger().log(Level.SEVERE, "Error extracting files", ex);
+            }
+        }
+
+        skins = new SkinManagerImpl(plugin, headsFolder);
 
         fakePlayerManager = new FakePlayerManagerImpl(plugin);
 
@@ -292,36 +317,18 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         }
         placeholderManager.internalRegisterPlaceholderProvider(new TimePlaceholders());
 
-        tabLists = new TabListManager(this);
-        if (!tabLists.loadTabLists()) {
-            return;
-        }
-
         if (plugin.getProxy().getPluginManager().getPlugin("ProtocolSupportBungee") != null) {
             protocolVersionProvider = new ProtocolSupportVersionProvider();
         } else {
             protocolVersionProvider = new BungeeProtocolVersionProvider();
         }
 
-        ProxyServer.getInstance().getPluginManager().registerListener(plugin,
-                listener);
-        plugin.getProxy().getScheduler().runAsync(plugin, resendThread);
-        restartRefreshThread();
-
         // register commands and update Notifier
-        try {
-            Thread.currentThread().getContextClassLoader().loadClass(
-                    "net.md_5.bungee.api.chat.ComponentBuilder");
-            ProxyServer.getInstance().getPluginManager().registerCommand(
-                    plugin,
-                    new SuperCommand(this));
-            ProxyServer.getInstance().getScheduler().schedule(plugin,
-                    new UpdateNotifier(this), 15, 15, TimeUnit.MINUTES);
-        } catch (Exception ex) {
-            ProxyServer.getInstance().getPluginManager().registerCommand(
-                    plugin,
-                    new OldSuperCommand(this));
-        }
+        ProxyServer.getInstance().getPluginManager().registerCommand(
+                plugin,
+                new CommandBungeeTabListPlus());
+        ProxyServer.getInstance().getScheduler().schedule(plugin,
+                new UpdateNotifier(this), 15, 15, TimeUnit.MINUTES);
 
         // Start metrics
         try {
@@ -332,8 +339,11 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         }
 
         // Load updateCheck thread
-        if (config.getMainConfig().checkForUpdates) {
+        if (config.checkForUpdates) {
             updateChecker = new UpdateChecker(plugin);
+            plugin.getLogger().info("Starting UpdateChecker Task");
+            plugin.getProxy().getScheduler().schedule(plugin, updateChecker, 0,
+                    UpdateChecker.interval, TimeUnit.MINUTES).getId();
         }
 
         // Start packet listeners
@@ -352,7 +362,21 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
 
         placeholderAPIHook = new PlaceholderAPIHook(this);
 
-        placeholderAPIHook.onLoad();
+        tabLists = new TabListManager(this);
+        if (!tabLists.loadTabLists()) {
+            return;
+        }
+
+        ProxyServer.getInstance().getPluginManager().registerListener(plugin,
+                listener);
+        plugin.getProxy().getScheduler().runAsync(plugin, resendThread);
+        restartRefreshThread();
+    }
+
+    public void onDisable() {
+        if (bugReportingService != null) {
+            bugReportingService.unregisterLogger(getLogger());
+        }
     }
 
     private Double requestedUpdateInterval = null;
@@ -361,7 +385,10 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         if (refreshThread != null) {
             refreshThread.cancel();
         }
-        double updateInterval = config.getMainConfig().tablistUpdateInterval;
+        double updateInterval = config.tablistUpdateInterval;
+        if (updateInterval <= 0 || updateInterval > 2) {
+            updateInterval = 2;
+        }
         if (requestedUpdateInterval != null && (requestedUpdateInterval < updateInterval || updateInterval <= 0)) {
             updateInterval = requestedUpdateInterval;
         }
@@ -409,15 +436,14 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         failIfNotMainThread();
         try {
             // todo requestedUpdateInterval = null;
-            config = new ConfigManager(plugin);
+            config = YamlConfig.read(new FileInputStream(new File(plugin.getDataFolder(), "config.yml")), MainConfig.class);
             placeholderManager.reload();
             if (reloadTablists()) return false;
             fakePlayerManager.reload();
             resendTabLists();
             restartRefreshThread();
-            placeholderAPIHook.onLoad();
             skins.onReload();
-        } catch (IOException ex) {
+        } catch (IOException | YAMLException ex) {
             plugin.getLogger().log(Level.WARNING, "Unable to reload Config", ex);
         }
         return true;
@@ -434,9 +460,39 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         return false;
     }
 
+    @Override
+    protected void registerVariable0(Plugin plugin, Variable variable) {
+        Preconditions.checkNotNull(plugin, "plugin");
+        Preconditions.checkNotNull(variable, "variable");
+        Preconditions.checkArgument(!Placeholder.thirdPartyDataKeys.containsKey(variable.getName()), "Variable name already registered.");
+        DataKey<String> dataKey = BTLPDataKeys.createBungeeThirdPartyVariableDataKey(variable.getName());
+        Placeholder.thirdPartyDataKeys.put(variable.getName(), dataKey);
+        getProxy().getScheduler().schedule(plugin, () -> {
+            for (ConnectedPlayer player : connectedPlayerManager.getPlayers()) {
+                try {
+                    String replacement = variable.getReplacement(player.getPlayer());
+                    if (!Objects.equals(replacement, player.getData().getRawValue(dataKey))) {
+                        runInMainThread(() -> {
+                            player.getData().updateValue(dataKey, replacement);
+                        });
+                    }
+                } catch (Throwable th) {
+                    getLogger().log(Level.WARNING, "Failed to resolve Placeholder " + variable.getName(), th);
+                }
+            }
+
+        }, 1, 1, TimeUnit.SECONDS);
+        runInMainThread(this::reloadTablists);
+    }
+
     public void registerPlaceholderProvider0(PlaceholderProvider placeholderProvider) {
         getPlaceholderManager0().internalRegisterPlaceholderProvider(placeholderProvider);
         runInMainThread(this::reloadTablists);
+    }
+
+    @Override
+    protected CustomTablist createCustomTablist0() {
+        return new DefaultCustomTablist();
     }
 
     /**
@@ -484,15 +540,6 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         return pm;
     }
 
-    /**
-     * Getter for the ConfigManager. For internal use only.
-     *
-     * @return an instance of the ConfigManager or null
-     */
-    public ConfigManager getConfigManager() {
-        return config;
-    }
-
     public PlaceholderManagerImpl getPlaceholderManager0() {
         return placeholderManager;
     }
@@ -518,13 +565,15 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
      * @return true if the player is hidden, false otherwise
      */
     public static boolean isHidden(Player player) {
-        if (isHiddenServer(player.getServer().orElse(null))) return true;
+        if (player.get(DATA_KEY_SERVER).map(BungeeTabListPlus::isHiddenServer).orElse(false)) {
+            return true;
+        }
         final boolean[] hidden = new boolean[1];
         synchronized (hiddenPlayers) {
             String name = player.getName();
             hidden[0] = hiddenPlayers.contains(name);
         }
-        List<String> permanentlyHiddenPlayers = getInstance().getConfigManager().getMainConfig().hiddenPlayers;
+        List<String> permanentlyHiddenPlayers = getInstance().config.hiddenPlayers;
         if (permanentlyHiddenPlayers.contains(player.getName())) {
             hidden[0] = true;
         }
@@ -579,10 +628,8 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
         }
     }
 
-    public static boolean isHiddenServer(ServerInfo server) {
-        if (server == null)
-            return false;
-        return getInstance().config.getMainConfig().hiddenServers.contains(server.getName());
+    public static boolean isHiddenServer(String serverName) {
+        return getInstance().config.hiddenServers.contains(serverName);
     }
 
     /**
@@ -672,8 +719,57 @@ public class BungeeTabListPlus extends BungeeTabListPlusAPI {
     }
 
     @Override
+    protected void setCustomTabList0(ProxiedPlayer player, CustomTablist customTablist) {
+        ConnectedPlayer connectedPlayer = getConnectedPlayerManager().getPlayerIfPresent(player);
+        if (connectedPlayer != null) {
+            connectedPlayer.setCustomTablist(customTablist);
+        }
+        updateTabListForPlayer(player);
+    }
+
+    @Override
     protected void removeCustomTabList0(ProxiedPlayer player) {
         Preconditions.checkState(getTabListManager() != null, "BungeeTabListPlus not initialized");
         getTabListManager().removeCustomTabList(player);
+        ConnectedPlayer connectedPlayer = getConnectedPlayerManager().getPlayerIfPresent(player);
+        if (connectedPlayer != null) {
+            connectedPlayer.setCustomTablist(null);
+        }
+        updateTabListForPlayer(player);
+    }
+
+    @Nonnull
+    @Override
+    protected Icon getIconFromPlayer0(ProxiedPlayer player) {
+        LoginResult loginResult = ((UserConnection) player).
+                getPendingConnection().getLoginProfile();
+        if (loginResult != null) {
+            LoginResult.Property[] properties = loginResult.getProperties();
+            if (properties != null) {
+                for (LoginResult.Property s : properties) {
+                    if (s.getName().equals("textures")) {
+                        return new Icon(player.getUniqueId(), new String[][]{{s.getName(), s.getValue(), s.getSignature()}});
+                    }
+                }
+            }
+        }
+        return new Icon(player.getUniqueId(), new String[0][]);
+    }
+
+    @Override
+    protected void createIcon0(BufferedImage image, Consumer<Icon> callback) {
+        getSkinManager().createIcon(image, callback);
+    }
+
+    public void registerTask(float interval, Runnable task) {
+        boolean first = !scheduledTasks.containsKey(interval);
+        scheduledTasks.computeIfAbsent(interval, f -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(task);
+        if (first) {
+            getProxy().getScheduler().schedule(getPlugin(), () -> scheduledTasks.get(interval).forEach(Runnable::run), (long) (interval * 1000), (long) (interval * 1000), TimeUnit.MILLISECONDS);
+        }
+    }
+
+    public void unregisterTask(float interval, Runnable task) {
+        scheduledTasks.get(interval).remove(task);
     }
 }

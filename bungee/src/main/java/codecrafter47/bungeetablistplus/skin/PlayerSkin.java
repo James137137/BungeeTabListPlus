@@ -19,9 +19,11 @@
 
 package codecrafter47.bungeetablistplus.skin;
 
+import codecrafter47.bungeetablistplus.api.bungee.Icon;
 import codecrafter47.bungeetablistplus.api.bungee.Skin;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
+import lombok.NonNull;
 
 import java.util.UUID;
 
@@ -29,6 +31,7 @@ import java.util.UUID;
 @EqualsAndHashCode
 public class PlayerSkin implements Skin {
     UUID player;
+    @NonNull
     String[][] properties;
 
     @Override
@@ -39,5 +42,9 @@ public class PlayerSkin implements Skin {
     @Override
     public UUID getOwner() {
         return player;
+    }
+
+    public static Skin fromIcon(Icon icon) {
+        return new PlayerSkin(icon.getPlayer(), icon.getProperties());
     }
 }

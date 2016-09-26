@@ -24,9 +24,31 @@ import codecrafter47.bungeetablistplus.api.bungee.placeholder.PlaceholderProvide
 import codecrafter47.bungeetablistplus.api.bungee.tablist.TabListProvider;
 import com.google.common.base.Preconditions;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.plugin.Plugin;
+
+import javax.annotation.Nonnull;
+import java.awt.image.BufferedImage;
+import java.util.function.Consumer;
 
 public abstract class BungeeTabListPlusAPI {
     private static BungeeTabListPlusAPI instance = null;
+
+    /**
+     * Registers a custom variable
+     * <p>
+     * You cannot use this to replace existing variables. If registering a variable which already
+     * exists there may be an exception thrown but there is no guarantee that an exception
+     * is thrown in that case.
+     *
+     * @param plugin   your plugin
+     * @param variable your variable
+     */
+    public static void registerVariable(Plugin plugin, Variable variable) {
+        Preconditions.checkState(instance != null, "instance is null, is the plugin enabled?");
+        instance.registerVariable0(plugin, variable);
+    }
+
+    protected abstract void registerVariable0(Plugin plugin, Variable variable);
 
     /**
      * Registers a PlaceholderProvider
@@ -34,7 +56,9 @@ public abstract class BungeeTabListPlusAPI {
      * A PlaceholderProvider can add multiple placeholders
      *
      * @param placeholderProvider the PlaceholderProvider
+     * @deprecated Use {@link #registerVariable(Plugin, Variable)} instead.
      */
+    @Deprecated
     public static void registerPlaceholderProvider(PlaceholderProvider placeholderProvider) {
         Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
         instance.registerPlaceholderProvider0(placeholderProvider);
@@ -43,17 +67,73 @@ public abstract class BungeeTabListPlusAPI {
     protected abstract void registerPlaceholderProvider0(PlaceholderProvider placeholderProvider);
 
     /**
+     * Create a new {@link CustomTablist}
+     *
+     * @return thte created {@link CustomTablist}
+     */
+    public static CustomTablist createCustomTablist() {
+        Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
+        return instance.createCustomTablist0();
+    }
+
+    protected abstract CustomTablist createCustomTablist0();
+
+    /**
      * Set a custom tab list for a player
      *
      * @param player          the player
      * @param tabListProvider the TabListProvider to use
+     * @deprecated Use {@link #setCustomTabList(ProxiedPlayer, CustomTablist)} instead
      */
+    @Deprecated
     public static void setCustomTabList(ProxiedPlayer player, TabListProvider tabListProvider) {
         Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
         instance.setCustomTabList0(player, tabListProvider);
     }
 
     protected abstract void setCustomTabList0(ProxiedPlayer player, TabListProvider tabListProvider);
+
+    /**
+     * Set a custom tab list for a player
+     *
+     * @param player        the player
+     * @param customTablist the CustomTablist to use
+     */
+    public static void setCustomTabList(ProxiedPlayer player, CustomTablist customTablist) {
+        Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
+        instance.setCustomTabList0(player, customTablist);
+    }
+
+    protected abstract void setCustomTabList0(ProxiedPlayer player, CustomTablist customTablist);
+
+    /**
+     * Get the face part of the players skin as an icon for use in the tab list.
+     *
+     * @param player the player
+     * @return the icon
+     */
+    @Nonnull
+    public static Icon getIconFromPlayer(ProxiedPlayer player) {
+        Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
+        return instance.getIconFromPlayer0(player);
+    }
+
+    @Nonnull
+    protected abstract Icon getIconFromPlayer0(ProxiedPlayer player);
+
+    /**
+     * Creates an icon from an 8x8 px image. The creation of the icon can take several
+     * minutes. When the icon has been created the callback is invoked.
+     *
+     * @param image    the image
+     * @param callback called when the icon is ready
+     */
+    public static void createIcon(BufferedImage image, Consumer<Icon> callback) {
+        Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
+        instance.createIcon0(image, callback);
+    }
+
+    protected abstract void createIcon0(BufferedImage image, Consumer<Icon> callback);
 
     /**
      * Removes a custom tab list from a player.
@@ -103,7 +183,9 @@ public abstract class BungeeTabListPlusAPI {
      * @param nameOrUUID either a valid player name or uuid or the name of an image file in the plugins/BungeeTabListPlus/heads directory
      * @return the skin associated with the player or the default skin
      * @throws IllegalArgumentException if the name or uuid is invalid
+     * @deprecated Use {@link #getIconFromPlayer(ProxiedPlayer)} instead.
      */
+    @Deprecated
     public static Skin getSkinForPlayer(String nameOrUUID) {
         Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
         return instance.getSkinForPlayer0(nameOrUUID);
@@ -115,7 +197,9 @@ public abstract class BungeeTabListPlusAPI {
      * This method returns an instance of the default skin (random Alex/ Steve skin)
      *
      * @return default skin
+     * @deprecated Use {@link Icon#DEFAULT} instead.
      */
+    @Deprecated
     public static Skin getDefaultSkin() {
         Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
         return instance.getDefaultSkin0();
@@ -127,7 +211,9 @@ public abstract class BungeeTabListPlusAPI {
      * Tell BungeeTabListPlus that all tab lists should be refreshed (at least) at the given interval
      *
      * @param interval interval in seconds
+     * @deprecated This is no longer required.
      */
+    @Deprecated
     public static void requireTabListUpdateInterval(double interval) {
         Preconditions.checkState(instance != null, "BungeeTabListPlus not initialized");
         instance.requireTabListUpdateInterval0(interval);

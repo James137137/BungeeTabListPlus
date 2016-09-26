@@ -6,17 +6,21 @@
     <groupId>codecrafter47.bungeetablistplus</groupId>
     <artifactId>BungeeTabListPlus-parent</artifactId>
     <packaging>pom</packaging>
-    <version>2.4.6-SNAPSHOT</version>
+    <version>2.6.4-SNAPSHOT</version>
     <modules>
         <module>bungee</module>
         <module>bukkit</module>
         <module>common</module>
         <module>bootstrap-bungee</module>
         <module>bootstrap-bukkit</module>
-        <module>legacy</module>
         <module>data</module>
         <module>api-bukkit</module>
         <module>api-bungee</module>
+        <module>api-sponge</module>
+        <module>sponge</module>
+        <module>example</module>
+        <module>bootstrap-bungee-debug</module>
+        <module>yaml-config</module>
     </modules>
 
     <properties>
@@ -46,14 +50,25 @@
     <repositories>
         <repository>
             <id>codecrafter47-repo</id>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
             <url>http://nexus.codecrafter47.dyndns.eu/content/repositories/public/</url>
+        </repository>
+        <repository>
+            <id>md_5-snapshots</id>
+            <url>http://repo.md-5.net/content/repositories/snapshots/</url>
+        </repository>
+        <repository>
+            <id>bungeeperms-repo</id>
+            <url>http://repo.wea-ondara.net/repository/public/</url>
         </repository>
     </repositories>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>

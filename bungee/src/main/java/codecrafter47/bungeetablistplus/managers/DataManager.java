@@ -20,16 +20,20 @@
 package codecrafter47.bungeetablistplus.managers;
 
 import codecrafter47.bungeetablistplus.BungeeTabListPlus;
+import codecrafter47.bungeetablistplus.api.bungee.BungeeTabListPlusAPI;
 import codecrafter47.bungeetablistplus.data.AbstractDataAccess;
 import codecrafter47.bungeetablistplus.data.DataCache;
 import codecrafter47.bungeetablistplus.data.DataKey;
 import codecrafter47.bungeetablistplus.data.DataKeys;
 import codecrafter47.bungeetablistplus.player.ConnectedPlayer;
+import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.plugin.Listener;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class DataManager extends AbstractDataAccess<ProxiedPlayer> implements Listener {
@@ -40,7 +44,7 @@ public class DataManager extends AbstractDataAccess<ProxiedPlayer> implements Li
         this.bungeeTabListPlus = bungeeTabListPlus;
         this.permissionManager = permissionManager;
         init();
-        ProxyServer.getInstance().getScheduler().schedule(bungeeTabListPlus.getPlugin(), this::updateData, 2, 2, TimeUnit.SECONDS);
+        ProxyServer.getInstance().getScheduler().schedule(bungeeTabListPlus.getPlugin(), this::updateData, 1, 1, TimeUnit.SECONDS);
     }
 
     private void init() {
@@ -51,7 +55,17 @@ public class DataManager extends AbstractDataAccess<ProxiedPlayer> implements Li
         bind(DataKeys.BungeePerms_DisplayPrefix, permissionManager::getDisplayPrefix);
         bind(DataKeys.BungeePerms_Suffix, permissionManager::getSuffixFromBungeePerms);
         bind(DataKeys.BungeePerms_Rank, permissionManager::getBungeePermsRank);
+        bind(DataKeys.BungeePerms_PrimaryGroupPrefix, permissionManager::getPrimaryGroupPrefixFromBungeePerms);
+        bind(DataKeys.BungeePerms_PlayerPrefix, permissionManager::getPlayerPrefixFromBungeePerms);
         bind(DataKeys.ClientVersion, player1 -> BungeeTabListPlus.getInstance().getProtocolVersionProvider().getVersionString(player1));
+        bind(DataKeys.BungeeCord_SessionDuration, p -> Optional.ofNullable(bungeeTabListPlus.getConnectedPlayerManager().getPlayerIfPresent(p)).map(ConnectedPlayer::getCurrentSessionDuration).orElse(null));
+        bind(BungeeTabListPlus.DATA_KEY_GAMEMODE, p -> ((UserConnection) p).getGamemode());
+        bind(BungeeTabListPlus.DATA_KEY_SERVER, p -> {
+            Server server = p.getServer();
+            return server != null ? server.getInfo().getName() : null;
+        });
+        bind(BungeeTabListPlus.DATA_KEY_ICON, BungeeTabListPlusAPI::getIconFromPlayer);
+        bind(DataKeys.BungeeCord_DisplayName, ProxiedPlayer::getDisplayName);
     }
 
     @SuppressWarnings("unchecked")

@@ -19,11 +19,14 @@
 
 package codecrafter47.bungeetablistplus.playersorting;
 
+import codecrafter47.bungeetablistplus.BungeeTabListPlus;
 import codecrafter47.bungeetablistplus.api.bungee.IPlayer;
 import codecrafter47.bungeetablistplus.api.bungee.tablist.TabListContext;
+import codecrafter47.bungeetablistplus.context.Context;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class PlayerSorter {
     private final List<SortingRule> rules;
@@ -32,7 +35,34 @@ public class PlayerSorter {
         this.rules = rules;
     }
 
-    public void sort(TabListContext context, List<IPlayer> players) {
+    public PlayerSorter(String desc) {
+        this(Arrays.stream(desc.split(",")).sequential().map(r -> {
+            Optional<SortingRule> rule = SortingRuleRegistry.getRule(r);
+            if (rule.isPresent()) {
+                return rule.get();
+            } else {
+                BungeeTabListPlus.getInstance().getLogger().log(Level.WARNING, "Sorting rule \"{0}\" does not exists.", r);
+                return null;
+            }
+        }).filter(Objects::nonNull).collect(Collectors.toList()));
+    }
+
+    public void sort(TabListContext context, List<? extends IPlayer> players) {
+        Collections.sort(players, (p1, p2) -> {
+            for (SortingRule rule : rules) {
+                int i = rule.compare(context, p1, p2);
+                if (i != 0) {
+                    return i;
+                }
+            }
+            if (players.indexOf(p2) > players.indexOf(p1)) {
+                return -1;
+            }
+            return 1;
+        });
+    }
+
+    public void sort(Context context, List<? extends IPlayer> players) {
         Collections.sort(players, (p1, p2) -> {
             for (SortingRule rule : rules) {
                 int i = rule.compare(context, p1, p2);

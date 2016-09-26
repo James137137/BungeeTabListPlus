@@ -26,20 +26,26 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.util.concurrent.Executor;
-import java.util.logging.*;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 public class BugReportingService {
     private final Level level;
     private final String pluginName;
     private final String pluginVersion;
     private final Executor executor;
+    private final String systemInfo;
     private final BugReportFormatter formatter = new BugReportFormatter();
 
-    public BugReportingService(Level level, String pluginName, String pluginVersion, Executor executor) {
+    public BugReportingService(Level level, String pluginName, String pluginVersion, Executor executor, String systemInfo) {
         this.level = level;
         this.pluginName = pluginName;
         this.pluginVersion = pluginVersion;
         this.executor = executor;
+        this.systemInfo = systemInfo;
     }
 
     public void registerLogger(Logger logger) {
@@ -49,6 +55,14 @@ public class BugReportingService {
         logger.addHandler(handler);
         handler.setLevel(level);
         handler.setFormatter(formatter);
+    }
+
+    public void unregisterLogger(Logger logger) {
+        for (Handler handler : logger.getHandlers()) {
+            if (handler instanceof UploadBugReportHandler) {
+                logger.removeHandler(handler);
+            }
+        }
     }
 
     private class UploadBugReportHandler extends Handler {
@@ -63,7 +77,7 @@ public class BugReportingService {
                                     "http://bugs.codecrafter47.dyndns.eu/?plugin=%s&version=%s&message=%s",
                                     URLEncoder.encode(pluginName, "UTF-8"),
                                     URLEncoder.encode(pluginVersion, "UTF-8"),
-                                    URLEncoder.encode(getFormatter().format(record), "UTF-8"));
+                                    URLEncoder.encode(getFormatter().format(record) + "\n\n" + systemInfo, "UTF-8"));
                             URLConnection connection = new URL(url).openConnection();
                             connection.connect();
                             connection.getInputStream().close();

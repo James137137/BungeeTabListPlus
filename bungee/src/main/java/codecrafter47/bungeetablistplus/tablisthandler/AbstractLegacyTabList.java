@@ -106,7 +106,6 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
                     PlayerListItem pli = new PlayerListItem();
                     PlayerListItem.Item item = new PlayerListItem.Item();
                     item.setDisplayName(entry.getKey());
-                    item.setUsername(entry.getKey());
                     item.setPing(entry.getValue());
                     pli.setItems(new PlayerListItem.Item[]{item});
                     pli.setAction(PlayerListItem.Action.ADD_PLAYER);
@@ -117,7 +116,6 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
                     PlayerListItem pli = new PlayerListItem();
                     PlayerListItem.Item item = new PlayerListItem.Item();
                     item.setDisplayName(player);
-                    item.setUsername(player);
                     item.setPing(9999);
                     pli.setItems(new PlayerListItem.Item[]{item});
                     pli.setAction(PlayerListItem.Action.REMOVE_PLAYER);
@@ -160,7 +158,6 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
         PlayerListItem pli = new PlayerListItem();
         PlayerListItem.Item item = new PlayerListItem.Item();
         item.setDisplayName(slotID[row]);
-        item.setUsername(slotID[row]);
         item.setPing(clientPing[row]);
         pli.setItems(new PlayerListItem.Item[]{item});
         pli.setAction(PlayerListItem.Action.ADD_PLAYER);
@@ -181,7 +178,6 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
                 PlayerListItem pli = new PlayerListItem();
                 PlayerListItem.Item item = new PlayerListItem.Item();
                 item.setDisplayName(slotID[row]);
-                item.setUsername(slotID[row]);
                 item.setPing(ping);
                 pli.setItems(new PlayerListItem.Item[]{item});
                 pli.setAction(PlayerListItem.Action.ADD_PLAYER);
@@ -206,7 +202,6 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
         PlayerListItem pli = new PlayerListItem();
         PlayerListItem.Item item = new PlayerListItem.Item();
         item.setDisplayName(slotID[i]);
-        item.setUsername(slotID[i]);
         item.setPing(9999);
         pli.setItems(new PlayerListItem.Item[]{item});
         pli.setAction(PlayerListItem.Action.REMOVE_PLAYER);
@@ -223,14 +218,24 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
     public PacketListenerResult onPlayerListPacket(PlayerListItem packet) {
         if (packet.getAction() == PlayerListItem.Action.ADD_PLAYER) {
             for (PlayerListItem.Item item : packet.getItems()) {
-                serverTabList.put(item.getUsername(), item.getPing());
+                serverTabList.put(getName(item), item.getPing());
             }
         } else {
             for (PlayerListItem.Item item : packet.getItems()) {
-                serverTabList.remove(item.getUsername());
+                serverTabList.remove(getName(item));
             }
         }
         return passThrough ? PacketListenerResult.PASS : PacketListenerResult.CANCEL;
+    }
+
+    private String getName(PlayerListItem.Item item) {
+        if (item.getDisplayName() != null) {
+            return item.getDisplayName();
+        } else if (item.getUsername() != null) {
+            return item.getUsername();
+        } else {
+            throw new AssertionError("DisplayName and Username are null");
+        }
     }
 
     @Override
@@ -252,7 +257,6 @@ public abstract class AbstractLegacyTabList implements PacketHandler {
             PlayerListItem pli = new PlayerListItem();
             PlayerListItem.Item item = new PlayerListItem.Item();
             item.setDisplayName(player);
-            item.setUsername(player);
             item.setPing(9999);
             pli.setItems(new PlayerListItem.Item[]{item});
             pli.setAction(PlayerListItem.Action.REMOVE_PLAYER);
