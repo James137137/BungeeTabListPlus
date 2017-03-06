@@ -6,7 +6,7 @@
     <groupId>codecrafter47.bungeetablistplus</groupId>
     <artifactId>BungeeTabListPlus-parent</artifactId>
     <packaging>pom</packaging>
-    <version>2.6.4-SNAPSHOT</version>
+    <version>2.7.4-SNAPSHOT</version>
     <modules>
         <module>bungee</module>
         <module>bukkit</module>
@@ -22,9 +22,15 @@
     </modules>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>1.7</maven.compiler.target>
         <maven.compiler.source>1.7</maven.compiler.source>
         <build.number>unknown</build.number>
+        <data-api.version>1.0.1-SNAPSHOT</data-api.version>
+        <sponge-api.version>5.0.0</sponge-api.version>
+        <lombok.version>1.16.12</lombok.version>
+        <spigot-api.version>1.11.2-R0.1-SNAPSHOT</spigot-api.version>
+        <bungeecord.version>1.11-SNAPSHOT</bungeecord.version>
     </properties>
 
     <scm>
@@ -53,10 +59,6 @@
         <repository>
             <id>md_5-snapshots</id>
             <url>http://repo.md-5.net/content/repositories/snapshots/</url>
-        </repository>
-        <repository>
-            <id>bungeeperms-repo</id>
-            <url>http://repo.wea-ondara.net/repository/public/</url>
         </repository>
     </repositories>
 

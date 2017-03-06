@@ -18,27 +18,22 @@
  */
 package codecrafter47.bungeetablistplus.managers;
 
+import de.codecrafter47.data.api.DataKey;
+import de.codecrafter47.data.bungee.api.BungeeData;
+import de.codecrafter47.data.minecraft.api.MinecraftData;
+import net.md_5.bungee.api.CommandSender;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
 import codecrafter47.bungeetablistplus.BungeeTabListPlus;
 import codecrafter47.bungeetablistplus.api.bungee.IPlayer;
 import codecrafter47.bungeetablistplus.api.bungee.tablist.TabListContext;
-import codecrafter47.bungeetablistplus.data.DataKey;
-import codecrafter47.bungeetablistplus.data.DataKeys;
 import codecrafter47.bungeetablistplus.player.ConnectedPlayer;
 import codecrafter47.bungeetablistplus.player.Player;
-import net.alpenblock.bungeeperms.BungeePerms;
-import net.alpenblock.bungeeperms.Group;
-import net.alpenblock.bungeeperms.PermissionsManager;
-import net.alpenblock.bungeeperms.User;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.plugin.Plugin;
 
-import java.util.Collection;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import nz.co.lolnet.lolnetfourmpermissionbcbridge.LolnetFourmPermissionBCBridge;
+
 
 public class PermissionManager {
 
@@ -57,152 +52,97 @@ public class PermissionManager {
         } catch (Exception ex) {}
         switch (plugin.getConfig().permissionSourceValue()) {
             case BUKKIT:
-                return ((Player) player).get(DataKeys.Vault_PermissionGroup).orElse("");
+                return ((Player) player).getOpt(MinecraftData.Permissions_PermissionGroup).orElse("");
             case BUNGEE:
-                return ((Player) player).get(DataKeys.BungeeCord_PrimaryGroup).orElse("default");
+                return ((Player) player).getOpt(BungeeData.BungeeCord_PrimaryGroup).orElse("default");
             case BUNGEEPERMS:
-                return ((Player) player).get(DataKeys.BungeePerms_PrimaryGroup).orElse("");
+                return ((Player) player).getOpt(BungeeData.BungeePerms_PrimaryGroup).orElse("");
+            case LUCKPERMS:
+                return ((Player) player).getOpt(BungeeData.LuckPerms_PrimaryGroup).orElse("");
             case AUTO:
             default:
-                Optional<String> group = ((Player) player).get(DataKeys.BungeePerms_PrimaryGroup);
-                if (group.isPresent()) {
-                    return group.get();
+                Optional<String> ret = ((Player) player).getOpt(BungeeData.BungeePerms_PrimaryGroup);
+                if (ret.isPresent()) {
+                    return ret.get();
                 }
-                Optional<String> optional = ((Player) player).get(DataKeys.Vault_PermissionGroup);
-                if (optional.isPresent()) {
-                    return optional.get();
-                } else {
-                    return ((Player) player).get(DataKeys.BungeeCord_PrimaryGroup).orElse("default");
-                }
-        }
-    }
 
-    String getMainGroupFromBungeeCord(ProxiedPlayer proxiedPlayer) {
-        if (proxiedPlayer != null) {
-            Collection<String> groups = proxiedPlayer.getGroups();
-            if (groups.size() == 1) {
-                return groups.iterator().next();
-            }
-            for (String group : groups) {
-                if (!group.equals("default")) {
-                    return group;
+                ret = ((Player) player).getOpt(BungeeData.LuckPerms_PrimaryGroup);
+                if (ret.isPresent()) {
+                    return ret.get();
                 }
-            }
-        }
-        return "default";
-    }
 
-    String getMainGroupFromBungeePerms(ProxiedPlayer player) {
-        Plugin p = ProxyServer.getInstance().getPluginManager().getPlugin("BungeePerms");
-        if (p != null) {
-            BungeePerms bp = BungeePerms.getInstance();
-            try {
-                PermissionsManager pm = bp.getPermissionsManager();
-                if (pm != null) {
-                    User user = pm.getUser(player.getName());
-                    Group mainGroup = null;
-                    if (user != null) {
-                        mainGroup = pm.getMainGroup(user);
-                    }
-                    if (mainGroup == null) {
-                        if (!pm.getDefaultGroups().isEmpty()) {
-                            mainGroup = pm.getDefaultGroups().get(0);
-                            for (int i = 1; i < pm.getDefaultGroups().size(); ++i) {
-                                if (pm.getDefaultGroups().get(i).getWeight() < mainGroup.getWeight()) {
-                                    mainGroup = pm.getDefaultGroups().get(i);
-                                }
-                            }
-                        }
-                    }
-
-                    if (mainGroup != null) {
-                        return mainGroup.getName();
-                    }
+                ret = ((Player) player).getOpt(MinecraftData.Permissions_PermissionGroup);
+                if (ret.isPresent()) {
+                    return ret.get();
                 }
-            } catch (NullPointerException ex) {
-                BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-            } catch (Throwable th) {
-                BungeeTabListPlus.getInstance().reportError(th);
-            }
-        }
-        return null;
-    }
 
-    Integer getBungeePermsRank(ProxiedPlayer player) {
-        try {
-            Plugin p = plugin.getProxy().getPluginManager().getPlugin("BungeePerms");
-            if (p != null) {
-                BungeePerms bp = BungeePerms.getInstance();
-                PermissionsManager pm = bp.getPermissionsManager();
-                if (pm != null) {
-                    User user = pm.getUser(player.getName());
-                    if (user != null) {
-                        Group mainGroup = pm.getMainGroup(user);
-                        if (mainGroup != null) {
-                            return mainGroup.getRank();
-                        }
-                    }
-                }
-            }
-        } catch (NullPointerException ex) {
-            BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-        } catch (Throwable th) {
-            BungeeTabListPlus.getInstance().reportError(th);
+                return ((Player) player).getOpt(BungeeData.BungeeCord_PrimaryGroup).orElse("default");
         }
-        return null;
     }
 
     public int comparePlayers(IPlayer p1, IPlayer p2) {
         switch (plugin.getConfig().permissionSourceValue()) {
             case BUKKIT: {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.Vault_PermissionGroupWeight);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.Vault_PermissionGroupWeight);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(MinecraftData.Permissions_PermissionGroupWeight);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(MinecraftData.Permissions_PermissionGroupWeight);
                 if (p1Rank.isPresent() || p2Rank.isPresent()) {
                     return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
                 }
-                p1Rank = ((Player) p1).get(DataKeys.Vault_PermissionGroupRank);
-                p2Rank = ((Player) p2).get(DataKeys.Vault_PermissionGroupRank);
+                p1Rank = ((Player) p1).getOpt(MinecraftData.Permissions_PermissionGroupRank);
+                p2Rank = ((Player) p2).getOpt(MinecraftData.Permissions_PermissionGroupRank);
                 return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
             }
             case BUNGEE: {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.BungeeCord_Rank);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.BungeeCord_Rank);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(BungeeData.BungeeCord_Rank);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(BungeeData.BungeeCord_Rank);
                 return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
             }
             case BUNGEEPERMS: {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.BungeePerms_Rank);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.BungeePerms_Rank);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(BungeeData.BungeePerms_Rank);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(BungeeData.BungeePerms_Rank);
+                return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
+            }
+            case LUCKPERMS: {
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(BungeeData.LuckPerms_Weight);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(BungeeData.LuckPerms_Weight);
                 return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
             }
             case AUTO:
             default: {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.BungeePerms_Rank);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.BungeePerms_Rank);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(BungeeData.BungeePerms_Rank);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(BungeeData.BungeePerms_Rank);
                 if (p1Rank.isPresent() || p2Rank.isPresent()) {
                     return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
                 }
             }
 
             {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.Vault_PermissionGroupWeight);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.Vault_PermissionGroupWeight);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(BungeeData.LuckPerms_Weight);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(BungeeData.LuckPerms_Weight);
                 if (p1Rank.isPresent() || p2Rank.isPresent()) {
                     return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
                 }
             }
 
             {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.Vault_PermissionGroupRank);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.Vault_PermissionGroupRank);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(MinecraftData.Permissions_PermissionGroupWeight);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(MinecraftData.Permissions_PermissionGroupWeight);
                 if (p1Rank.isPresent() || p2Rank.isPresent()) {
                     return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
                 }
             }
 
-            // BungeeCord
             {
-                Optional<Integer> p1Rank = ((Player) p1).get(DataKeys.BungeeCord_Rank);
-                Optional<Integer> p2Rank = ((Player) p2).get(DataKeys.BungeeCord_Rank);
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(MinecraftData.Permissions_PermissionGroupRank);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(MinecraftData.Permissions_PermissionGroupRank);
+                if (p1Rank.isPresent() || p2Rank.isPresent()) {
+                    return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
+                }
+            }
+
+            {
+                Optional<Integer> p1Rank = ((Player) p1).getOpt(BungeeData.BungeeCord_Rank);
+                Optional<Integer> p2Rank = ((Player) p2).getOpt(BungeeData.BungeeCord_Rank);
                 if (p1Rank.isPresent() || p2Rank.isPresent()) {
                     return p1Rank.orElse(Integer.MAX_VALUE) - p2Rank.orElse(Integer.MAX_VALUE);
                 }
@@ -211,35 +151,35 @@ public class PermissionManager {
         }
     }
 
-    int getBungeeCordRank(ProxiedPlayer player) {
-        int rank = 0;
-        for (String group : player.getGroups()) {
-            if (!group.equals("default")) {
-                rank += 1;
-            }
-            if (group.equals("admin")) {
-                rank += 2;
-            }
-        }
-        return Integer.MAX_VALUE - rank;
-    }
-
     public String getPrefix(TabListContext context) {
         IPlayer player = context.getPlayer();
         switch (plugin.getConfig().permissionSourceValue()) {
             case BUKKIT:
-                return ((Player) player).get(DataKeys.Vault_Prefix).orElse("");
+                return ((Player) player).getOpt(MinecraftData.Permissions_Prefix).orElse("");
             case BUNGEE:
                 return getConfigPrefix(context, player);
             case BUNGEEPERMS:
-                return ((Player) player).get(DataKeys.BungeePerms_Prefix).orElse("");
+                return ((Player) player).getOpt(BungeeData.BungeePerms_Prefix).orElse("");
+            case LUCKPERMS:
+                return ((Player) player).getOpt(BungeeData.LuckPerms_Prefix).orElse("");
             case AUTO:
             default:
                 String prefix = getConfigPrefix(context, player);
                 if (!prefix.isEmpty()) {
                     return prefix;
                 }
-                return ((Player) player).get(DataKeys.BungeePerms_Prefix).orElseGet(() -> ((Player) player).get(DataKeys.Vault_Prefix).orElse(""));
+
+                Optional<String> ret = ((Player) player).getOpt(BungeeData.BungeePerms_Prefix);
+                if (ret.isPresent()) {
+                    return ret.get();
+                }
+
+                ret = ((Player) player).getOpt(BungeeData.LuckPerms_Prefix);
+                if (ret.isPresent()) {
+                    return ret.get();
+                }
+
+                return  ((Player) player).getOpt(MinecraftData.Permissions_Prefix).orElse("");
         }
     }
 
@@ -251,161 +191,29 @@ public class PermissionManager {
         return prefix != null ? prefix : "";
     }
 
-    String getPrefixFromBungeePerms(ProxiedPlayer player) {
-        Plugin p = plugin.getProxy().getPluginManager().getPlugin("BungeePerms");
-        if (p != null) {
-            BungeePerms bp = BungeePerms.getInstance();
-            try {
-                PermissionsManager pm = bp.getPermissionsManager();
-                if (pm != null) {
-                    User user = pm.getUser(player.getName());
-                    if (user != null) {
-                        if (isBungeePerms3()) {
-                            return user.buildPrefix();
-                        } else {
-                            Group mainGroup = pm.getMainGroup(user);
-                            if (mainGroup != null) {
-                                return mainGroup.getPrefix();
-                            }
-                        }
-                    }
-                }
-            } catch (NullPointerException ex) {
-                BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-            } catch (Throwable th) {
-                BungeeTabListPlus.getInstance().reportError(th);
-            }
-        }
-        return null;
-    }
-
-    String getPrimaryGroupPrefixFromBungeePerms(ProxiedPlayer player) {
-        Plugin p = plugin.getProxy().getPluginManager().getPlugin("BungeePerms");
-        if (p != null) {
-            BungeePerms bp = BungeePerms.getInstance();
-            try {
-                PermissionsManager pm = bp.getPermissionsManager();
-                if (pm != null) {
-                    User user = pm.getUser(player.getName());
-                    if (user != null) {
-                        Group mainGroup = pm.getMainGroup(user);
-                        if (mainGroup != null) {
-                            return mainGroup.getPrefix();
-                        }
-                    }
-                }
-            } catch (NullPointerException ex) {
-                BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-            } catch (Throwable th) {
-                BungeeTabListPlus.getInstance().reportError(th);
-            }
-        }
-        return null;
-    }
-
-    String getPlayerPrefixFromBungeePerms(ProxiedPlayer player) {
-        Plugin p = plugin.getProxy().getPluginManager().getPlugin("BungeePerms");
-        if (isBungeePerms3()) {
-            if (p != null) {
-                BungeePerms bp = BungeePerms.getInstance();
-                try {
-                    PermissionsManager pm = bp.getPermissionsManager();
-                    if (pm != null) {
-                        User user = pm.getUser(player.getName());
-                        if (user != null) {
-                            return user.getPrefix();
-                        }
-                    }
-                } catch (NullPointerException ex) {
-                    BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-                } catch (Throwable th) {
-                    BungeeTabListPlus.getInstance().reportError(th);
-                }
-            }
-        }
-        return null;
-    }
-
-    String getDisplayPrefix(ProxiedPlayer player) {
-        // BungeePerms
-        String display = null;
-        Plugin p = plugin.getProxy().getPluginManager().getPlugin("BungeePerms");
-        if (p != null) {
-            BungeePerms bp = BungeePerms.getInstance();
-            try {
-                PermissionsManager pm = bp.getPermissionsManager();
-                if (pm != null) {
-                    User user = pm.getUser(player.getName());
-                    if (user != null) {
-                        if (isBungeePerms3()) {
-                            display = user.getDisplay();
-                            if (display == null || display.isEmpty()) {
-                                Group group = pm.getMainGroup(user);
-                                if (group != null) {
-                                    display = group.getDisplay();
-                                }
-                            }
-                        } else {
-                            Group group = pm.getMainGroup(user);
-                            if (group != null) {
-                                display = group.getDisplay();
-                            }
-                        }
-                    }
-                }
-            } catch (NullPointerException ex) {
-                BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-            } catch (Throwable th) {
-                BungeeTabListPlus.getInstance().reportError(th);
-            }
-        }
-
-        if (display == null) {
-            display = "";
-        }
-
-        return display;
-    }
-
     public String getSuffix(IPlayer player) {
         switch (plugin.getConfig().permissionSourceValue()) {
             case BUKKIT:
-                return ((Player) player).get(DataKeys.Vault_Suffix).orElse("");
+                return ((Player) player).getOpt(MinecraftData.Permissions_Suffix).orElse("");
             case BUNGEE:
             case BUNGEEPERMS:
-                return ((Player) player).get(DataKeys.BungeePerms_Suffix).orElse("");
+                return ((Player) player).getOpt(BungeeData.BungeePerms_Suffix).orElse("");
+            case LUCKPERMS:
+                return ((Player) player).getOpt(BungeeData.LuckPerms_Suffix).orElse("");
             case AUTO:
             default:
-                return ((Player) player).get(DataKeys.BungeePerms_Suffix).orElseGet(() -> ((Player) player).get(DataKeys.Vault_Suffix).orElse(""));
-        }
-    }
-
-    String getSuffixFromBungeePerms(ProxiedPlayer player) {
-        Plugin p = plugin.getProxy().getPluginManager().getPlugin("BungeePerms");
-        if (p != null) {
-            BungeePerms bp = BungeePerms.getInstance();
-            try {
-                PermissionsManager pm = bp.getPermissionsManager();
-                if (pm != null) {
-                    User user = pm.getUser(player.getName());
-                    if (user != null) {
-                        if (isBungeePerms3()) {
-                            return user.buildSuffix();
-                        } else {
-                            Group group = pm.getMainGroup(user);
-                            if (group != null) {
-                                return group.getSuffix();
-                            }
-                        }
-                    }
+                Optional<String> ret = ((Player) player).getOpt(BungeeData.BungeePerms_Suffix);
+                if (ret.isPresent()) {
+                    return ret.get();
                 }
-            } catch (NullPointerException ex) {
-                BungeeTabListPlus.getInstance().getLogger().log(Level.SEVERE, "An error occurred while querying data from BungeePerms. Make sure you have configured BungeePerms to use it's uuidPlayerDB.", ex);
-            } catch (Throwable th) {
-                BungeeTabListPlus.getInstance().reportError(th);
-            }
+
+                ret = ((Player) player).getOpt(BungeeData.LuckPerms_Suffix);
+                if (ret.isPresent()) {
+                    return ret.get();
+                }
+
+                return ((Player) player).getOpt(MinecraftData.Permissions_Suffix).orElse("");
         }
-        return null;
     }
 
     public boolean hasPermission(CommandSender sender, String permission) {
@@ -414,7 +222,7 @@ public class PermissionManager {
         }
 
         try {
-            DataKey<Boolean> dataKey = DataKeys.permission(permission);
+            DataKey<Boolean> dataKey = MinecraftData.permission(permission);
             ConnectedPlayer player = plugin.getConnectedPlayerManager().getPlayerIfPresent((ProxiedPlayer) sender);
             if (player != null) {
                 Optional<Boolean> has = player.get(dataKey);
@@ -427,18 +235,5 @@ public class PermissionManager {
         }
 
         return false;
-    }
-
-    private boolean isBungeePerms3() {
-        return isClassPresent("net.alpenblock.bungeeperms.platform.bungee.BungeePlugin");
-    }
-
-    private boolean isClassPresent(String name) {
-        try {
-            Class.forName(name);
-            return true;
-        } catch (ClassNotFoundException ignored) {
-            return false;
-        }
     }
 }

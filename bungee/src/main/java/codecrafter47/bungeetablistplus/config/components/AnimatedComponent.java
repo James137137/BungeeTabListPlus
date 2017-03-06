@@ -21,6 +21,7 @@ package codecrafter47.bungeetablistplus.config.components;
 
 import codecrafter47.bungeetablistplus.BungeeTabListPlus;
 import codecrafter47.bungeetablistplus.context.Context;
+import codecrafter47.bungeetablistplus.tablist.component.ComponentTablistAccess;
 import codecrafter47.bungeetablistplus.yamlconfig.Validate;
 import com.google.common.base.Preconditions;
 import lombok.Getter;
@@ -59,7 +60,7 @@ public class AnimatedComponent extends Component implements Validate {
 
     @Override
     public Instance toInstance(Context context) {
-        return new Instance(context);
+        return new Instance(context, components, interval, getSize());
     }
 
     @Override
@@ -69,30 +70,34 @@ public class AnimatedComponent extends Component implements Validate {
         Preconditions.checkArgument(interval > 0, "interval is negative", interval);
     }
 
-    public class Instance extends Component.Instance implements Runnable {
+    public static class Instance extends Component.Instance implements Runnable {
 
         private List<Component.Instance> frames;
         private int activeComponent = -1;
+        private int interval;
+        private final int size;
 
-        protected Instance(Context context) {
+        protected Instance(Context context, List<Component> components, float interval, int size) {
             super(context);
             frames = new ArrayList<>(components.size());
+            this.size = size;
             for (Component component : components) {
                 frames.add(component.toInstance(context));
             }
+            this.interval = (int) (interval * 1000);
         }
 
         @Override
         public void activate() {
             super.activate();
-            BungeeTabListPlus.getInstance().registerTask(getInterval(), this);
+            BungeeTabListPlus.getInstance().registerTask(interval / 1000f, this);
         }
 
         @Override
         public void deactivate() {
             super.deactivate();
             synchronized (context.get(Context.KEY_TAB_LIST)) {
-                BungeeTabListPlus.getInstance().unregisterTask(getInterval(), this);
+                BungeeTabListPlus.getInstance().unregisterTask(interval / 1000f, this);
                 activeComponent = -1;
             }
         }
@@ -106,18 +111,21 @@ public class AnimatedComponent extends Component implements Validate {
         public void update2ndStep() {
             super.update2ndStep();
             synchronized (context.get(Context.KEY_TAB_LIST)) {
-                if (activeComponent == -1) {
-                    activeComponent = 0;
-                    Component.Instance component = frames.get(0);
-                    component.activate();
-                    component.update1stStep();
-                    component.setPosition(leftMostColumn, row, column, size);
-                    component.update2ndStep();
-                } else {
-                    Component.Instance component = frames.get(activeComponent);
-                    component.update1stStep();
-                    component.setPosition(leftMostColumn, row, column, size);
-                    component.update2ndStep();
+                ComponentTablistAccess cta = getTablistAccess();
+                if (cta != null) {
+                    if (activeComponent == -1) {
+                        activeComponent = (int) ((System.currentTimeMillis() / interval) % frames.size());
+                        Component.Instance component = frames.get(activeComponent);
+                        component.activate();
+                        component.update1stStep();
+                        component.setPosition(cta);
+                        component.update2ndStep();
+                    } else {
+                        Component.Instance component = frames.get(activeComponent);
+                        component.update1stStep();
+                        component.setPosition(cta);
+                        component.update2ndStep();
+                    }
                 }
             }
         }
@@ -126,33 +134,35 @@ public class AnimatedComponent extends Component implements Validate {
         public void run() {
             if (activeComponent != -1) {
                 synchronized (context.get(Context.KEY_TAB_LIST)) {
-                    frames.get(activeComponent).deactivate();
-                    activeComponent++;
-                    if (activeComponent >= frames.size()) {
-                        activeComponent = 0;
+                    ComponentTablistAccess cta = getTablistAccess();
+                    if (cta != null) {
+                        if (activeComponent != -1) {
+                            frames.get(activeComponent).deactivate();
+                            activeComponent = (int) ((System.currentTimeMillis() / interval) % frames.size());
+                            Component.Instance component = frames.get(activeComponent);
+                            component.activate();
+                            component.update1stStep();
+                            component.setPosition(cta);
+                            component.update2ndStep();
+                        }
                     }
-                    Component.Instance component = frames.get(activeComponent);
-                    component.activate();
-                    component.update1stStep();
-                    component.setPosition(leftMostColumn, row, column, size);
-                    component.update2ndStep();
                 }
             }
         }
 
         @Override
         public int getMinSize() {
-            return getSize();
+            return size;
         }
 
         @Override
         public int getPreferredSize() {
-            return getSize();
+            return size;
         }
 
         @Override
         public int getMaxSize() {
-            return getSize();
+            return size;
         }
 
         @Override

@@ -20,6 +20,7 @@
 package codecrafter47.bungeetablistplus.tablisthandler.logic;
 
 import codecrafter47.bungeetablistplus.api.bungee.Icon;
+import codecrafter47.bungeetablistplus.tablisthandler.PlayerTablistHandler;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import net.md_5.bungee.protocol.packet.PlayerListItem;
@@ -692,5 +693,55 @@ public class AbstractTabListLogicTest extends AbstractTabListLogicTestBase {
         for (int i = 0; i < 50; i++) {
             assertEquals("", clientTabList.teams.get(clientTabList.playerToTeamMap.get(usernames[i])).getPrefix());
         }
+    }
+
+    @Test
+    public void testSelfGamemode3Size0() {
+        assertEquals(0, clientTabList.getSize());
+        tabListHandler.setResizePolicy(PlayerTablistHandler.ResizePolicy.DYNAMIC);
+        tabListHandler.setPassThrough(false);
+        assertEquals(0, clientTabList.getSize());
+
+        PlayerListItem packet = new PlayerListItem();
+        packet.setAction(PlayerListItem.Action.ADD_PLAYER);
+        PlayerListItem.Item item = new PlayerListItem.Item();
+        item.setUsername(usernames[47]);
+        item.setUuid(clientUUID);
+        item.setPing(47);
+        item.setProperties(new String[0][]);
+        item.setGamemode(3);
+        packet.setItems(new PlayerListItem.Item[]{item});
+        tabListHandler.onPlayerListPacket(packet);
+
+        assertEquals(1, clientTabList.getSize());
+        assertEquals(clientUUID, clientTabList.getVisibleEntries().get(0).getUuid());
+    }
+
+    @Test
+    public void testSelfGamemode3Size1() {
+        assertEquals(0, clientTabList.getSize());
+        tabListHandler.setResizePolicy(PlayerTablistHandler.ResizePolicy.DYNAMIC);
+        tabListHandler.setPassThrough(false);
+        tabListHandler.setSize(1);
+        tabListHandler.setSlot(0, new Icon(clientUUID, new String[0][]), "name", 47);
+        assertEquals(1, clientTabList.getSize());
+
+        PlayerListItem packet = new PlayerListItem();
+        packet.setAction(PlayerListItem.Action.ADD_PLAYER);
+        PlayerListItem.Item item = new PlayerListItem.Item();
+        item.setUsername(usernames[47]);
+        item.setUuid(clientUUID);
+        item.setPing(47);
+        item.setProperties(new String[0][]);
+        item.setGamemode(0);
+        packet.setItems(new PlayerListItem.Item[]{item});
+        tabListHandler.onPlayerListPacket(packet);
+        assertEquals(0, clientTabList.getVisibleEntries().get(0).getGamemode());
+
+        item.setGamemode(3);
+        packet.setAction(PlayerListItem.Action.UPDATE_GAMEMODE);
+        tabListHandler.onPlayerListPacket(packet);
+
+        assertEquals(3, clientTabList.getVisibleEntries().get(0).getGamemode());
     }
 }

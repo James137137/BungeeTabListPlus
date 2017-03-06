@@ -287,6 +287,11 @@ public abstract class AbstractTabListLogic extends TabListHandler {
                         } else if (item.getGamemode() != 3 && slot == size - 1) {
                             useFakePlayerForSlot(size - 1);
                             useRealPlayerForSlot(findSlotForPlayer(getUniqueId()), getUniqueId());
+                        } else {
+                            PlayerListItem packetOut = new PlayerListItem();
+                            packetOut.setAction(UPDATE_GAMEMODE);
+                            packetOut.setItems(new PlayerListItem.Item[]{item});
+                            sendPacket(packetOut);
                         }
                     }
                 }
@@ -915,10 +920,11 @@ public abstract class AbstractTabListLogic extends TabListHandler {
                         addPlayerToTeam(slot, clientUuid[slot], clientUsername[slot]);
                     }
                     if (serverTabList.containsKey(getUniqueId())
-                            && serverTabList.get(getUniqueId()).getGamemode() == 3
-                            && clientUuid[this.size - 1].equals(getUniqueId())) {
-                        useFakePlayerForSlot(this.size - 1);
-                        useRealPlayerForSlot(size - 1, getUniqueId());
+                            && serverTabList.get(getUniqueId()).getGamemode() == 3) {
+                        if (this.size > 0 && clientUuid[this.size - 1].equals(getUniqueId())) {
+                            useFakePlayerForSlot(this.size - 1);
+                            useRealPlayerForSlot(size - 1, getUniqueId());
+                        }
                     }
                 }
             } else if (size < this.size) {

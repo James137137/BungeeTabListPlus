@@ -29,13 +29,12 @@ import codecrafter47.bungeetablistplus.expression.ExpressionResult;
 import codecrafter47.bungeetablistplus.tablistproviders.legacy.CheckedTabListProvider;
 import codecrafter47.bungeetablistplus.tablistproviders.legacy.IConfigTabListProvider;
 import codecrafter47.bungeetablistplus.yamlconfig.YamlConfig;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
+import lombok.Getter;
+import lombok.val;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.event.PlayerDisconnectEvent;
-import net.md_5.bungee.api.event.ServerKickEvent;
-import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.event.EventHandler;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,19 +43,18 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 
-import static net.md_5.bungee.event.EventPriority.HIGHEST;
-
-public class TabListManager implements Listener {
+public class TabListManager {
 
     private final BungeeTabListPlus plugin;
     private final List<IConfigTabListProvider> tabLists = new ArrayList<>();
     private final List<Config> configs = new ArrayList<>();
+    @Getter
+    private ImmutableList<String> filesNeedingUpgrade = ImmutableList.of();
 
     public Map<ProxiedPlayer, TabListProvider> customTabLists = new HashMap<>();
 
     public TabListManager(BungeeTabListPlus plugin) {
         this.plugin = plugin;
-        plugin.getProxy().getPluginManager().registerListener(plugin.getPlugin(), this);
     }
 
     // returns true on success
@@ -73,6 +71,7 @@ public class TabListManager implements Listener {
             }
         }
 
+        val needUpgrade = ImmutableList.<String>builder();
         for (File file : tablistFolder.listFiles()) {
             if (file.isFile() && file.getName().endsWith(".yml")) {
                 try {
@@ -81,6 +80,8 @@ public class TabListManager implements Listener {
                     ITabListConfig tabListConfig = Objects.requireNonNull(YamlConfig.read(new FileInputStream(file), ITabListConfig.class));
 
                     if (tabListConfig instanceof TabListConfig) {
+                        needUpgrade.add(file.getName());
+                        plugin.getLogger().log(Level.WARNING, "{0} needs to be updated, see https://github.com/CodeCrafter47/BungeeTabListPlus/wiki/Updating", file.getName());
                         TabListConfig c = (TabListConfig) tabListConfig;
                         plugin.getPlaceholderAPIHook().searchTabList(c);
                         validateShowTo(c);
@@ -93,6 +94,7 @@ public class TabListManager implements Listener {
                 }
             }
         }
+        this.filesNeedingUpgrade = needUpgrade.build();
         return true;
     }
 
@@ -211,16 +213,5 @@ public class TabListManager implements Listener {
 
     public void removeCustomTabList(ProxiedPlayer player) {
         customTabLists.remove(player);
-    }
-
-    @EventHandler
-    public void onDisconnect(PlayerDisconnectEvent event) {
-        if (customTabLists.containsKey(event.getPlayer())) customTabLists.remove(event.getPlayer());
-    }
-
-    @EventHandler(priority = HIGHEST)
-    public void onDisconnect(ServerKickEvent event) {
-        if (event.isCancelled()) return;
-        if (customTabLists.containsKey(event.getPlayer())) customTabLists.remove(event.getPlayer());
     }
 }
