@@ -77,7 +77,6 @@ public class ConnectedPlayerManager implements IPlayerProvider {
 
     @Synchronized
     public void onPlayerConnected(ConnectedPlayer player) {
-        player.setBukkitData(BungeeTabListPlus.getInstance().getBridge().onConnected(player.getPlayer()));
         players.add(player);
         byName.put(player.getName(), player);
         byUUID.put(player.getUniqueID(), player);
@@ -91,9 +90,10 @@ public class ConnectedPlayerManager implements IPlayerProvider {
         }
         byName.remove(player.getName(), player);
         byUUID.remove(player.getUniqueID(), player);
-        BungeeTabListPlus.getInstance().getBridge().onDisconnected(player.getPlayer());
         playerList = ImmutableList.copyOf((Iterable<? extends ConnectedPlayer>) players);
-        player.getPlayerTablistHandler().onDisconnect();
+        BungeeTabListPlus.getInstance().runInMainThread(() -> {
+            player.getPlayerTablistHandler().onDisconnect();
+        });
         PacketHandler packetHandler = player.getPacketHandler();
         if (packetHandler instanceof TabListHandler) {
             ((TabListHandler) packetHandler).onDisconnected();

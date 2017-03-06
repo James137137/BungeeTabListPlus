@@ -24,9 +24,14 @@ import codecrafter47.bungeetablistplus.config.DynamicSizeConfig;
 import codecrafter47.bungeetablistplus.config.components.Component;
 import codecrafter47.bungeetablistplus.context.Context;
 import codecrafter47.bungeetablistplus.player.Player;
+import codecrafter47.bungeetablistplus.playersorting.PlayerSorter;
+import codecrafter47.bungeetablistplus.playersorting.SortingRule;
+import codecrafter47.bungeetablistplus.playersorting.rules.ViewerInSpectatorModeLast;
+import codecrafter47.bungeetablistplus.tablist.component.ComponentTablistAccess;
 import codecrafter47.bungeetablistplus.tablisthandler.PlayerTablistHandler;
 import codecrafter47.bungeetablistplus.template.IconTemplate;
 import codecrafter47.bungeetablistplus.template.PingTemplate;
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,10 +42,14 @@ import static java.lang.Integer.min;
 public class DynamicSizeConfigTablistProvider extends ConfigTablistProvider<DynamicSizeConfig> {
 
     private List<Component.Instance> activeComponents = new ArrayList<>();
+    private final PlayerSorter playerSorter;
 
     public DynamicSizeConfigTablistProvider(DynamicSizeConfig config, Context context) {
         super(config, context);
         this.context.put(Context.KEY_COLUMNS, 1);
+        this.playerSorter = new PlayerSorter(ImmutableList.<SortingRule>builder()
+                .add(new ViewerInSpectatorModeLast())
+                .addAll(config.getPlayerOrder().getRules()).build());
     }
 
     @Override
@@ -55,6 +64,10 @@ public class DynamicSizeConfigTablistProvider extends ConfigTablistProvider<Dyna
 
     @Override
     public synchronized void update() {
+        if (!active) {
+            return;
+        }
+
         super.update();
 
         // get players
@@ -63,7 +76,7 @@ public class DynamicSizeConfigTablistProvider extends ConfigTablistProvider<Dyna
             players = Collections.emptyList();
             BungeeTabListPlus.getInstance().getLogger().warning("Missing player set " + config.getPlayerSet());
         }
-        config.getPlayerOrder().sort(context, players);
+        playerSorter.sort(context, players);
 
         // deactivate old components
         activeComponents.forEach(Component.Instance::deactivate);
@@ -73,6 +86,7 @@ public class DynamicSizeConfigTablistProvider extends ConfigTablistProvider<Dyna
         setSize(1, size);
 
         // create & update components
+        ComponentTablistAccess cta = ComponentTablistAccess.of(this);
         int pos = 0;
         int i;
         for (i = 0; pos < size; i++) {
@@ -80,7 +94,7 @@ public class DynamicSizeConfigTablistProvider extends ConfigTablistProvider<Dyna
             Component.Instance component = config.getPlayerComponent().toInstance(context.derived().put(Context.KEY_PLAYER, player).put(Context.KEY_DEFAULT_ICON, IconTemplate.PLAYER_ICON).put(Context.KEY_DEFAULT_PING, PingTemplate.PLAYER_PING));
             component.activate();
             component.update1stStep();
-            component.setPosition(0, pos, 0, config.getPlayerComponent().getSize());
+            component.setPosition(ComponentTablistAccess.createChild(cta, config.getPlayerComponent().getSize(), pos));
             component.update2ndStep();
             activeComponents.add(component);
             pos += config.getPlayerComponent().getSize();

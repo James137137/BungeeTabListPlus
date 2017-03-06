@@ -47,6 +47,7 @@ public class ExpressionTokenizer {
             .put("!", Token.NEGATION)
             .put(">", Token.GREATER_THAN)
             .put("<", Token.LESSER_THAN)
+            .put("=", Token.EQUAL)
             .put(".", Token.CONCAT_STRING).build();
 
     private final String expression;
@@ -124,6 +125,20 @@ public class ExpressionTokenizer {
             int startIndex = index;
 
             while (++index < expression.length() && '"' != expression.charAt(index)) ;
+
+            if (index >= expression.length()) {
+                throw new IllegalArgumentException(format("Incomplete string literal starting at index %d in \"%s\"", startIndex, expression));
+            }
+
+            index += 1;
+
+            return new StringToken(expression.substring(startIndex, index));
+        }
+
+        if (index < expression.length() && expression.charAt(index) == '\'') {
+            int startIndex = index;
+
+            while (++index < expression.length() && '\'' != expression.charAt(index)) ;
 
             if (index >= expression.length()) {
                 throw new IllegalArgumentException(format("Incomplete string literal starting at index %d in \"%s\"", startIndex, expression));

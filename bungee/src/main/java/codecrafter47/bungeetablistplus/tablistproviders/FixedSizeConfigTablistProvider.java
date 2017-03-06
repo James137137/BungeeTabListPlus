@@ -24,6 +24,7 @@ import codecrafter47.bungeetablistplus.config.FixedSizeConfig;
 import codecrafter47.bungeetablistplus.config.components.Component;
 import codecrafter47.bungeetablistplus.config.components.ListComponent;
 import codecrafter47.bungeetablistplus.context.Context;
+import codecrafter47.bungeetablistplus.tablist.component.ComponentTablistAccess;
 import codecrafter47.bungeetablistplus.tablisthandler.PlayerTablistHandler;
 import codecrafter47.bungeetablistplus.template.PingTemplate;
 import lombok.NonNull;
@@ -73,11 +74,15 @@ public class FixedSizeConfigTablistProvider extends ConfigTablistProvider<FixedS
 
     @Override
     public synchronized void update() {
+        if (!active) {
+            return;
+        }
+
         super.update();
 
         // Tab overlay
         Arrays.fill(marks, false);
-        content.setPosition(0, 0, 0, getSize());
+        content.setPosition(ComponentTablistAccess.of(this));
         content.update1stStep();
         content.update2ndStep();
         for (int i = 0; i < marks.length; i++) {

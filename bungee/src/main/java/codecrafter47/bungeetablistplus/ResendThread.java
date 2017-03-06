@@ -20,6 +20,7 @@ package codecrafter47.bungeetablistplus;
 
 import codecrafter47.bungeetablistplus.config.Config;
 import codecrafter47.bungeetablistplus.config.DynamicSizeConfig;
+import codecrafter47.bungeetablistplus.config.FixedColumnsConfig;
 import codecrafter47.bungeetablistplus.config.FixedSizeConfig;
 import codecrafter47.bungeetablistplus.context.Context;
 import codecrafter47.bungeetablistplus.layout.LayoutException;
@@ -31,10 +32,7 @@ import gnu.trove.set.hash.THashSet;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
 
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +40,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
-class ResendThread implements Runnable, Executor {
+public class ResendThread implements Runnable, Executor {
 
     private final Queue<ProxiedPlayer> queue = new ConcurrentLinkedQueue<>();
     private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
@@ -125,7 +123,11 @@ class ResendThread implements Runnable, Executor {
             } else {
                 TablistProvider tablistProvider = tablistHandler.getTablistProvider();
                 Server server = player.getServer();
-                if (server != null && !(BungeeTabListPlus.getInstance().getConfig().excludeServers.contains(server.getInfo().getName()))) {
+                List<String> excludeServers = BungeeTabListPlus.getInstance().getConfig().excludeServers;
+                if (excludeServers == null) {
+                    excludeServers = Collections.emptyList();
+                }
+                if (server != null && !(excludeServers.contains(server.getInfo().getName()))) {
                     Context context = new Context().put(Context.KEY_VIEWER, connectedPlayer);
                     Config config = BungeeTabListPlus.getInstance().getTabListManager().getNewConfigForContext(context);
                     if (config != null && (!(tablistProvider instanceof ConfigTablistProvider) || ((ConfigTablistProvider) tablistProvider).config != config)) {
@@ -152,6 +154,8 @@ class ResendThread implements Runnable, Executor {
     private ConfigTablistProvider createTablistProvider(Context context, Config config) {
         if (config instanceof FixedSizeConfig) {
             return new FixedSizeConfigTablistProvider((FixedSizeConfig) config, context);
+        } else if (config instanceof FixedColumnsConfig) {
+            return new FixedColumnsConfigTablistProvider((FixedColumnsConfig) config, context);
         } else if (config instanceof DynamicSizeConfig) {
             return new DynamicSizeConfigTablistProvider((DynamicSizeConfig) config, context);
         } else {
